@@ -213,6 +213,54 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       </div>
     </div>
 
+    <!-- تأكيد البريد: شاشة ثابتة لا رسالة عابرة، لأن المراجع
+         يحتاج أن يترك التطبيق ويفتح بريده ثم يعود -->
+    <div class="card hide" id="au-vfy">
+      <div class="ctr">
+        <div style="font-size:40px;line-height:1">📩</div>
+        <div class="h2 mt">أكّد بريدك</div>
+        <div class="tiny mt">أرسلنا رسالة إلى</div>
+        <div class="mono" id="vf-mail"
+             style="font-weight:800;margin-top:3px;word-break:break-all"></div>
+      </div>
+
+      <div class="al w"><span>!</span><span>
+        الحساب لا يعمل قبل التأكيد. هذه خطوة لمرة واحدة، تمنع أن يسجّل
+        أحد ببريدك.</span></div>
+
+      <div class="card flat">
+        <div class="lbl">كيف تؤكّد — ثلاث خطوات</div>
+        <div class="col mt">
+          <div class="row" style="align-items:flex-start">
+            <div class="av" style="width:27px;height:27px;font-size:13px">1</div>
+            <div class="gr" style="font-weight:700;font-size:13.5px">
+              افتح تطبيق البريد على هاتفك</div>
+          </div>
+          <div class="row" style="align-items:flex-start">
+            <div class="av" style="width:27px;height:27px;font-size:13px">2</div>
+            <div class="gr" style="font-weight:700;font-size:13.5px">
+              افتح رسالة <b>Confirm your email address</b>
+              <div class="tiny">إن لم تجدها، شوف مجلد الرسائل المزعجة (Spam)</div>
+            </div>
+          </div>
+          <div class="row" style="align-items:flex-start">
+            <div class="av" style="width:27px;height:27px;font-size:13px">3</div>
+            <div class="gr" style="font-weight:700;font-size:13.5px">
+              اضغط <b>Confirm email address</b>
+              <div class="tiny">لو فتحت صفحة فيها خطأ، لا يهم — التأكيد تمّ فعلاً</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vf-err" class="al r hide"></div>
+      <button class="btn w mt2" id="vf-done">أكّدت — دخول</button>
+      <div class="row mt" style="gap:8px">
+        <button class="btn gh gr" id="vf-again">إعادة إرسال الرسالة</button>
+        <button class="btn gh gr" id="vf-back">تغيير البريد</button>
+      </div>
+    </div>
+
     <!-- تسجيل -->
     <div class="card hide" id="au-reg">
       <div class="h3">حساب جديد</div>
@@ -387,9 +435,13 @@ const S = { tab:'home', profile:null, clinic:null, clinics:null };
 
 /*═══════════════ الدخول ═══════════════*/
 const Auth = {
+  waiting:'',        /* البريد الذي ينتظر التأكيد */
+
   show(which){
-    $('#au-in').classList.toggle('hide', which !== 'in');
+    $('#au-in').classList.toggle('hide',  which !== 'in');
     $('#au-reg').classList.toggle('hide', which !== 'reg');
+    $('#au-vfy').classList.toggle('hide', which !== 'vfy');
+    $('#vf-err')?.classList.add('hide');
     $('#au-cfgwarn').style.display = Cloud.ready() ? 'none' : 'block';
     if (!Cloud.ready()) $('#au-cfgwarn').querySelector('span:last-child').textContent =
       'المفتاح غير مضبوط في الملف — راجع CLOUD_KEY في أعلى الكود';
@@ -398,6 +450,66 @@ const Auth = {
   },
 
   err(id, msg){ const e = $(id); e.textContent = msg; e.classList.remove('hide'); },
+
+  /* شاشة الانتظار — يُحفظ البريد فتعود إليها لو أُغلق التطبيق */
+  await1(email){
+    this.waiting = email;
+    try { localStorage.setItem('pt_wait', email); } catch(_){}
+    $('#vf-mail').textContent = email;
+    this.show('vfy');
+  },
+
+  clearWait(){
+    this.waiting = '';
+    try { localStorage.removeItem('pt_wait'); } catch(_){}
+  },
+
+  /* «أكّدت — دخول»: يُعاد المحاولة بنفس البيانات */
+  async confirmed(){
+    const b = $('#vf-done'); b.disabled = true; b.textContent = 'جارٍ التحقّق…';
+    try {
+      const pass = sessionStorage.getItem('pt_tmp') || '';
+      if (!pass){
+        this.clearWait();
+        $('#in-email').value = this.waiting;
+        toast('سجّل الدخول الآن', 's');
+        return this.show('in');
+      }
+      const me = await Cloud.signIn(this.waiting, pass);
+      sessionStorage.removeItem('pt_tmp');
+      this.clearWait();
+      if (!me || me.role === 'none') return this.finishProfile();
+      App.enter(me);
+    } catch (e) {
+      const m = String(e.message || e);
+      const el = $('#vf-err');
+      el.textContent = /not confirmed/i.test(m)
+        ? 'ما زال البريد غير مؤكّد — افتح الرسالة واضغط الرابط ثم أعد المحاولة'
+        : m;
+      el.classList.remove('hide');
+    } finally { b.disabled = false; b.textContent = 'أكّدت — دخول'; }
+  },
+
+  /* الحساب أُنشئ لكن معلوماته لم تُحفظ بعد (أُغلق التطبيق قبلها) */
+  async finishProfile(){
+    const d = JSON.parse(sessionStorage.getItem('pt_prof') || 'null');
+    if (!d){ toast('أكمل معلوماتك', 'e'); return this.show('reg'); }
+    await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:d });
+    sessionStorage.removeItem('pt_prof');
+    App.enter(await Cloud.whoami());
+  },
+
+  async resend(){
+    const b = $('#vf-again'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
+    try {
+      await Cloud.call('/auth/v1/resend',
+        { method:'POST', auth:false, body:{ type:'signup', email:this.waiting } });
+      toast('أُرسلت الرسالة مرة أخرى', 's');
+    } catch (e) {
+      const el = $('#vf-err');
+      el.textContent = String(e.message || e); el.classList.remove('hide');
+    } finally { b.disabled = false; b.textContent = 'إعادة إرسال الرسالة'; }
+  },
 
   async signIn(){
     const email = $('#in-email').value.trim().toLowerCase();
@@ -416,6 +528,13 @@ const Auth = {
       App.enter(me);
     } catch (e) {
       const m = String(e.message || e);
+      /* البريد غير المؤكّد ليس خطأ دخول — يُوجَّه لا يُلام */
+      if (/not confirmed/i.test(m)){
+        try { sessionStorage.setItem('pt_tmp', pass); } catch(_){}
+        return this.await1(email);
+      }
+      if (/api key/i.test(m))
+        return this.err('#in-err', 'مفتاح الاتصال غير صحيح — راجع CLOUD_KEY في الملف');
       this.err('#in-err', /invalid|credential|grant/i.test(m)
         ? 'البريد أو كلمة المرور غير صحيحة' : m);
     } finally { b.disabled = false; b.textContent = 'دخول'; }
@@ -436,20 +555,27 @@ const Auth = {
     const b = $('#rg-go'); b.disabled = true; b.textContent = 'جارٍ الإنشاء…';
     try {
       const email = v('rg-email').toLowerCase();
-      const signed = await Cloud.signUp(email, v('rg-pass'));
-      if (!signed){
-        toast('أُنشئ الحساب — أكّد بريدك ثم سجّل الدخول', 's');
-        $('#in-email').value = email;
-        return this.show('in');
-      }
       /* يُحفظ العمر كتاريخ ميلاد تقريبي فلا يقادم مع السنين */
       const birth = new Date(new Date().getFullYear() - age, 0, 1)
         .toISOString().slice(0,10);
-      await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:{
+      const prof = {
         p_n1:v('rg-n1'), p_n2:v('rg-n2'), p_n3:v('rg-n3'), p_n4:v('rg-n4'),
         p_sex: $('#rg-sex').value === 'female' ? 'f' : 'm',
         p_birth: birth, p_phone: v('rg-phone'),
-      }});
+      };
+      /* يبقيان في ذاكرة الجلسة وحدها: يُمحيان بإغلاق التبويب،
+         ولا يُكتبان على القرص. */
+      try {
+        sessionStorage.setItem('pt_prof', JSON.stringify(prof));
+        sessionStorage.setItem('pt_tmp', v('rg-pass'));
+      } catch(_){}
+
+      const signed = await Cloud.signUp(email, v('rg-pass'));
+      if (!signed) return this.await1(email);   /* ينتظر التأكيد */
+
+      await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:prof });
+      sessionStorage.removeItem('pt_prof');
+      sessionStorage.removeItem('pt_tmp');
       App.enter(await Cloud.whoami());
     } catch (e) {
       const m = String(e.message || e);
@@ -1006,14 +1132,20 @@ window.installApp = () => Install.go();
   Cloud.load();
   $('#in-go').onclick  = () => Auth.signIn();
   $('#rg-go').onclick  = () => Auth.register();
-  $('#to-reg').onclick = () => Auth.show('reg');
+  $('#to-reg').onclick  = () => Auth.show('reg');
+  $('#vf-done').onclick  = () => Auth.confirmed();
+  $('#vf-again').onclick = () => Auth.resend();
+  $('#vf-back').onclick  = () => { Auth.clearWait(); Auth.show('reg'); };
   $('#to-in').onclick  = () => Auth.show('in');
   $('#in-pass').onkeydown  = e => { if (e.key === 'Enter') Auth.signIn(); };
   $('#in-email').onkeydown = e => { if (e.key === 'Enter') $('#in-pass').focus(); };
   $$('#tabs button').forEach(b => b.onclick = () => App.setTab(b.dataset.t));
 
   Install.init();
-  Auth.show('in');
+  /* من أُغلق تطبيقه وهو ينتظر التأكيد يعود إلى مكانه لا إلى البداية */
+  const wait = localStorage.getItem('pt_wait');
+  if (wait){ Auth.waiting = wait; $('#vf-mail').textContent = wait; Auth.show('vfy'); }
+  else Auth.show('in');
 
   /* جلسة محفوظة: يُفتح التطبيق مباشرة بلا إعادة دخول */
   if (Cloud.session && Cloud.ready()){
