@@ -6,7 +6,7 @@
 <title>مواعيدي — حجز عيادة الأسنان</title>
 <meta name="theme-color" content="#00695C">
 <!-- الاتصال مقصور على سيرفر العيادة وحده -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; manifest-src blob:; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,6 +161,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tabs button.on{color:var(--br);background:var(--brL)}
 .tabs .ic{font-size:19px;line-height:1}
 
+/* شريط التثبيت — نفس شكل برنامج العيادة */
+#instbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
+  z-index:50;padding:0 12px;display:flex;justify-content:center}
+#instbar .box{display:flex;align-items:center;gap:11px;width:100%;max-width:536px;
+  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--stroke);border-radius:16px;padding:10px 12px;box-shadow:var(--shL);
+  animation:up .35s cubic-bezier(.2,.9,.3,1)}
+#instbar img{width:38px;height:38px;border-radius:11px;flex-shrink:0}
+#instbar .nm{font-weight:900;font-size:14.5px}
+#instbar .ds{font-size:11.5px;color:var(--ink2);font-weight:600;line-height:1.4}
+#instbar .x{width:28px;height:28px;border-radius:9px;color:var(--ink3);flex-shrink:0;
+  font-size:14px;background:var(--glass2)}
+
 .toast{position:fixed;inset-inline:0;bottom:88px;z-index:60;display:flex;justify-content:center;
        pointer-events:none;padding:0 16px}
 .toast div{background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
@@ -177,7 +190,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   <!-- ═══ الدخول والتسجيل ═══ -->
   <div id="auth">
     <div class="ctr" style="padding:34px 0 6px">
-      <div style="font-size:46px;line-height:1">🦷</div>
+      <img src="" id="au-logo" alt="" style="width:74px;height:74px;border-radius:20px;
+        box-shadow:var(--shL)">
       <div class="h1 mt">مواعيدي</div>
       <div class="tiny mt" id="au-tag">احجز موعدك في عيادة الأسنان</div>
     </div>
@@ -197,7 +211,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="ctr mt2">
         <button class="lnk" id="to-reg">ما عندك حساب؟ سجّل الآن</button>
       </div>
-      <div class="ctr"><button class="lnk" id="in-cfg" style="color:var(--ink3)">ربط السيرفر</button></div>
     </div>
 
     <!-- تسجيل -->
@@ -275,18 +288,21 @@ const spin = () => '<div class="spin"></div>';
   نفس أسلوب برنامج العيادة: fetch مباشر بلا مكتبات، والإعدادات
   في الجهاز لا في الكود.
 ═════════════════════════════════════*/
+/*═══════════════ إعدادات السيرفر ═══════════════
+  ★ المكان الوحيد الذي تعدّله: الصق مفتاحك في CLOUD_KEY أدناه —
+    نفس المفتاح المستعمل في برنامج العيادة.
+═══════════════════════════════════════════════*/
+const CLOUD_URL = 'https://eziaplhqcgaoqpfphddh.supabase.co';
+const CLOUD_KEY = 'sb_publishable_KQWQDnHTsfEcY4VFUAtm5g_5nfEc';
+
 const Cloud = {
-  cfg:{ url:'', key:'' }, session:null, me:null,
+  cfg:{ url:CLOUD_URL, key:CLOUD_KEY }, session:null, me:null,
 
   load(){
-    try {
-      this.cfg = JSON.parse(localStorage.getItem('pt_cloud')) || { url:'', key:'' };
-      this.session = JSON.parse(localStorage.getItem('pt_sess')) || null;
-    } catch(_){ this.cfg = { url:'', key:'' }; this.session = null; }
-  },
-  saveCfg(url, key){
-    this.cfg = { url:String(url||'').trim().replace(/\/+$/,''), key:String(key||'').trim() };
-    try { localStorage.setItem('pt_cloud', JSON.stringify(this.cfg)); } catch(_){}
+    /* العنوان والمفتاح من الملف لا من الجهاز — لا ضبط يدوي */
+    this.cfg = { url:CLOUD_URL.replace(/\/+$/,''), key:CLOUD_KEY };
+    try { this.session = JSON.parse(localStorage.getItem('pt_sess')) || null; }
+    catch(_){ this.session = null; }
   },
   ready(){ return !!(this.cfg.url && this.cfg.key); },
   saveSess(v){
@@ -375,6 +391,8 @@ const Auth = {
     $('#au-in').classList.toggle('hide', which !== 'in');
     $('#au-reg').classList.toggle('hide', which !== 'reg');
     $('#au-cfgwarn').style.display = Cloud.ready() ? 'none' : 'block';
+    if (!Cloud.ready()) $('#au-cfgwarn').querySelector('span:last-child').textContent =
+      'المفتاح غير مضبوط في الملف — راجع CLOUD_KEY في أعلى الكود';
     $('#in-err').classList.add('hide');
     $('#rg-err').classList.add('hide');
   },
@@ -440,17 +458,6 @@ const Auth = {
     } finally { b.disabled = false; b.textContent = 'إنشاء الحساب'; }
   },
 
-  cfg(){
-    const c = Cloud.cfg;
-    $('#view').innerHTML = '';
-    const url = prompt('رابط المشروع (Project URL)', c.url || 'https://xxxx.supabase.co');
-    if (url === null) return;
-    const key = prompt('المفتاح العام (Publishable key)', c.key || '');
-    if (key === null) return;
-    Cloud.saveCfg(url, key);
-    toast('حُفظ الاتصال', 's');
-    this.show('in');
-  },
 };
 
 /*═══════════════ الشاشات ═══════════════*/
@@ -623,11 +630,17 @@ const Book = {
         <div class="lbl">وضعك الصحي</div>
         <div class="tiny mt">يحتاجها الطبيب قبل أي إجراء. اختر ما ينطبق عليك.</div>
         <div class="col mt2" id="b-mh">
-          ${this.MH.map(m => `
-            <label class="it" style="cursor:pointer">
-              <input type="checkbox" value="${m.c}" style="width:20px;height:20px;flex:0 0 auto">
-              <span class="gr" style="font-weight:700;font-size:14px">${esc(m.ar)}</span>
-            </label>`).join('')}
+          ${this.MH.filter(m => !m.f || p.sex === 'f').map(m => `
+            <div>
+              <label class="it" style="cursor:pointer">
+                <input type="checkbox" value="${m.c}" data-d="${m.d?1:0}"
+                  onchange="Book.detail(this)"
+                  style="width:20px;height:20px;flex:0 0 auto">
+                <span class="gr" style="font-weight:700;font-size:14px">${esc(m.ar)}</span>
+              </label>
+              ${m.d ? `<input class="hide mt" id="d-${m.c}"
+                placeholder="${esc(m.dl || 'اكتب التفاصيل')}">` : ''}
+            </div>`).join('')}
         </div>
       </div>
 
@@ -636,19 +649,42 @@ const Book = {
       <div style="height:12px"></div>`;
   },
 
-  /* أهم ما يحتاجه الطبيب قبل إجراء نازف — مختصر لا استبيان كامل */
+  /* الأسئلة نفسها التي يعتمدها برنامج العيادة — الاثنان يقرآن
+     المفاتيح ذاتها، فما يجيب عنه المراجع هنا يظهر هناك كما هو.
+     f:1 يعني سؤالاً نسائياً لا يظهر للذكور.
+     d:1 يعني أن الإجابة بنعم تفتح حقل تفصيل. */
   MH:[
-    { c:'health_good',  ar:'صحتي جيدة ولا أعاني من شيء' },
-    { c:'diabetes',     ar:'سكري' },
-    { c:'bp',           ar:'ضغط دم' },
-    { c:'cardiac',      ar:'مشاكل في القلب' },
-    { c:'bleeding',     ar:'نزف أو سيولة دم' },
-    { c:'allergy_drug', ar:'حساسية من دواء' },
-    { c:'allergy_any',  ar:'حساسية أو ربو' },
-    { c:'hepatitis',    ar:'التهاب كبد سابق' },
-    { c:'meds_now',     ar:'أتناول أدوية حالياً' },
-    { c:'pregnant',     ar:'حامل' },
+    { c:'health_good', ar:'هل صحتك جيده؟' },
+    { c:'valves', ar:'هل لديك خلل في صمامات القلب او صمامات مزروعه؟', d:1 },
+    { c:'congenital', ar:'هل لديك مشاكل في القلب وراثية / ولاديه؟', d:1 },
+    { c:'diabetes', ar:'هل لديك مرض السكر؟', d:1 },
+    { c:'syncope', ar:'هل لديك حالات اغماء او نوبات فقدان وعي او صرع؟', d:1 },
+    { c:'hepatitis', ar:'هل اصبت سابقا بالتهاب الكبد الفايروسي؟', d:1 },
+    { c:'allergy_any', ar:'هل لديك حساسيه من أي نوع او مشاكل الجيوب الانفيه او ربو؟', d:1 },
+    { c:'gi_ulcer', ar:'هل لديك مشاكل الجهاز الهضمي او قرحة المعده؟' },
+    { c:'anemia', ar:'هل لديك فقر دم او أي مشاكل تتعلق بنقل الدم؟' },
+    { c:'meds_now', ar:'هل انت مستمر على استعمال ادويه معينه حاليا؟', d:1 },
+    { c:'bp', ar:'هل لديك مشاكل ضغط الدم؟', d:1 },
+    { c:'pacemaker', ar:'هل لديك جهاز تنظيم ضربات القلب؟' },
+    { c:'cardiac', ar:'هل لديك أي مشكله بالقلب أو الشرايين، نوبة قلبيه سابقة/ ذبحه/ انسداد او تصلب الشرايين التاجيه؟', d:1 },
+    { c:'allergy_drug', ar:'هل لديك حساسية لادويه معينه او ممنوع طبيا من استعمال ادويه معينه؟', d:1, dl:'اسم الدواء' },
+    { c:'infectious', ar:'هل انت حامل لاي مرض معدي؟', d:1 },
+    { c:'bleeding', ar:'هل لديك حالات نزف غير متوقف سابقا لاي سبب؟', d:1 },
+    { c:'tb_resp', ar:'هل لديك تدرن او مشاكل بالرئه والجهاز التنفسي؟', d:1 },
+    { c:'cancer_tx', ar:'هل تستعمل علاج للسرطان بالاشعه او العلاج الكيميائي؟', d:1 },
+    { c:'kidney', ar:'هل لديك مشاكل تتعلق بالكلى؟' },
+    { c:'pregnant', ar:'هل انت حامل؟', d:1, dl:'حامل بأي شهر؟', f:1 },
+    { c:'nursing', ar:'هل انت مرضع؟', d:1, dl:'كم عمر الطفل الرضيع؟', f:1 },
+    { c:'gyneco', ar:'هل لديك مشاكل نسائيه؟', d:1, f:1 },
   ],
+
+  /* الإجابة بنعم تفتح حقل التفصيل — الطبيب يحتاج «أي دواء» لا «نعم» فقط */
+  detail(box){
+    const f = $('#d-' + box.value);
+    if (!f) return;
+    f.classList.toggle('hide', !box.checked);
+    if (box.checked) f.focus(); else f.value = '';
+  },
 
   async save(){
     const err = $('#b-err');
@@ -663,8 +699,12 @@ const Book = {
     if (day < today())  return show('اليوم المختار مضى — اختر يوماً قادماً');
     if (comp.length < 4) return show('اكتب سبب المراجعة');
 
+    /* القيمة نصّ التفصيل إن وُجد، وإلا ١ — نفس ما يتوقّعه برنامج العيادة */
     const mh = {};
-    $$('#b-mh input:checked').forEach(i => mh[i.value] = 1);
+    $$('#b-mh input[type=checkbox]:checked').forEach(i => {
+      const d = $('#d-' + i.value);
+      mh[i.value] = (d && d.value.trim()) ? d.value.trim() : 1;
+    });
     if (!Object.keys(mh).length)
       return show('اختر حالة صحية واحدة على الأقل، أو «صحتي جيدة»');
 
@@ -806,6 +846,149 @@ const Me = {
   },
 };
 
+
+/*═══════════════ الأيقونة والتثبيت ═══════════════
+  الأيقونة نفسها المستعملة في برنامج العيادة: المراجع يعرف من
+  الشاشة الرئيسية أنه تطبيق عيادته، لا برنامجاً غريباً.
+═════════════════════════════════════════════════*/
+const APP = { nameAr:'مواعيدي', nameEn:'My appointments',
+              green:'#00796B', green2:'#00A88F' };
+
+const ICON = {
+  cache:{},
+  svg(size, maskable){
+    const pad = maskable ? 0.19 : 0;
+    const r   = maskable ? 0 : size * 0.22;
+    const sz  = size * (1 - pad * 2), o = size * pad;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${APP.green2}"/><stop offset="1" stop-color="${APP.green}"/>
+      </linearGradient></defs>
+      <rect width="${size}" height="${size}" rx="${r}" fill="url(#g)"/>
+      <g transform="translate(${o} ${o}) scale(${sz/24})">
+        <path fill="#FFFFFF" d="M12 3c-3 0-4-1.2-6 0C4 4.2 3.4 7 4 10c.5 2.6 1.3 4 1.8 6.6.4 2 .6 4.4 2 4.4 1.6 0 1.3-2.6 1.8-4.6.4-1.6.8-2.4 2.4-2.4s2 .8 2.4 2.4c.5 2 .2 4.6 1.8 4.6 1.4 0 1.6-2.4 2-4.4.5-2.6 1.3-4 1.8-6.6.6-3 0-5.8-2-7-2-1.2-3 0-6 0z"/>
+      </g></svg>`;
+  },
+  dataSvg(size, maskable){
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(this.svg(size, maskable))));
+  },
+  /* PNG أوثق للتثبيت: أنظمة التشغيل لا تقبل SVG دائماً */
+  png(size, maskable){
+    const key = size + (maskable ? 'm' : '');
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        c.getContext('2d').drawImage(img, 0, 0, size, size);
+        this.cache[key] = c.toDataURL('image/png');
+        res(this.cache[key]);
+      };
+      img.onerror = () => res(this.dataSvg(size, maskable));
+      img.src = this.dataSvg(size, maskable);
+    });
+  },
+};
+
+const Install = {
+  prompt:null,
+
+  async manifest(){
+    const [i192, i512, m512] = await Promise.all([
+      ICON.png(192,false), ICON.png(512,false), ICON.png(512,true),
+    ]);
+    const man = {
+      id:'asnani-my-appointments',
+      name:`${APP.nameAr} — ${APP.nameEn}`,
+      short_name:APP.nameAr,
+      description:'حجز مواعيد عيادة الأسنان',
+      start_url:location.href.split('#')[0],
+      scope:'./', display:'standalone', orientation:'any',
+      background_color:'#E8EFF1', theme_color:APP.green,
+      dir:'rtl', lang:'ar',
+      icons:[
+        { src:i192, sizes:'192x192', type:'image/png', purpose:'any' },
+        { src:i512, sizes:'512x512', type:'image/png', purpose:'any' },
+        { src:m512, sizes:'512x512', type:'image/png', purpose:'maskable' },
+      ],
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(man)],
+      { type:'application/manifest+json' }));
+    const put = (rel, href, type) => {
+      let l = document.querySelector(`link[rel="${rel}"]`);
+      if (!l){ l = document.createElement('link'); l.rel = rel; document.head.appendChild(l); }
+      if (type) l.type = type;
+      l.href = href;
+    };
+    put('manifest', url);
+    put('apple-touch-icon', i192);   /* آيفون لا يقرأ manifest */
+    put('icon', i192, 'image/png');
+  },
+
+  standalone(){
+    return matchMedia('(display-mode: standalone)').matches
+        || navigator.standalone === true;
+  },
+  isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; },
+
+  init(){
+    this.manifest();
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault(); this.prompt = e; this.bar();
+    });
+    window.addEventListener('appinstalled', () => {
+      this.prompt = null;
+      try { localStorage.setItem('pt_installed','1'); } catch(_){}
+      this.hide(); toast('تم تثبيت التطبيق', 's');
+    });
+    /* آيفون لا يطلق الحدث — يُعرض الإرشاد بعد لحظة */
+    if (this.isIOS() && !this.standalone() && !localStorage.getItem('pt_inst_x'))
+      setTimeout(() => this.bar(), 1400);
+  },
+
+  bar(){
+    if (this.standalone() || localStorage.getItem('pt_inst_x')) return;
+    if (document.getElementById('instbar')) return;
+    const d = document.createElement('div');
+    d.id = 'instbar';
+    d.innerHTML = `<div class="box">
+      <img src="${ICON.dataSvg(160,false)}" alt="">
+      <div class="gr" style="min-width:0">
+        <div class="nm">${APP.nameAr}</div>
+        <div class="ds">${this.isIOS()
+          ? 'من زر المشاركة ← أضف إلى الشاشة الرئيسية'
+          : 'ثبّته ليفتح كتطبيق ويصلك أسرع'}</div>
+      </div>
+      ${this.isIOS() ? '' : '<button class="btn sm" id="inst-go">تثبيت</button>'}
+      <button class="x" id="inst-x">✕</button>
+    </div>`;
+    document.body.appendChild(d);
+    d.querySelector('#inst-x').onclick = () => this.dismiss();
+    d.querySelector('#inst-go')?.addEventListener('click', () => this.go());
+  },
+
+  hide(){ document.getElementById('instbar')?.remove(); },
+  dismiss(){ try { localStorage.setItem('pt_inst_x','1'); } catch(_){} this.hide(); },
+
+  async go(){
+    if (!this.prompt) return this.help();
+    this.prompt.prompt();
+    const r = await this.prompt.userChoice.catch(() => null);
+    this.prompt = null;
+    if (r?.outcome === 'accepted') this.hide();
+  },
+
+  /* سبب دقيق بدل رسالة مبهمة */
+  help(){
+    const https = location.protocol === 'https:' ||
+                  ['localhost','127.0.0.1'].includes(location.hostname);
+    toast(https ? 'من قائمة المتصفح ← تثبيت التطبيق'
+                : 'التثبيت يحتاج فتح التطبيق عبر رابط https', 'e');
+  },
+};
+window.installApp = () => Install.go();
+
 /*═══════════════ الإقلاع ═══════════════*/
 (function boot(){
   /* المظهر يتبع الجهاز ما لم يختر المراجع غيره */
@@ -819,16 +1002,17 @@ const Me = {
     try { localStorage.setItem('pt_theme', now); } catch(_){}
   };
 
+  $('#au-logo').src = ICON.dataSvg(256, false);
   Cloud.load();
   $('#in-go').onclick  = () => Auth.signIn();
   $('#rg-go').onclick  = () => Auth.register();
   $('#to-reg').onclick = () => Auth.show('reg');
   $('#to-in').onclick  = () => Auth.show('in');
-  $('#in-cfg').onclick = () => Auth.cfg();
   $('#in-pass').onkeydown  = e => { if (e.key === 'Enter') Auth.signIn(); };
   $('#in-email').onkeydown = e => { if (e.key === 'Enter') $('#in-pass').focus(); };
   $$('#tabs button').forEach(b => b.onclick = () => App.setTab(b.dataset.t));
 
+  Install.init();
   Auth.show('in');
 
   /* جلسة محفوظة: يُفتح التطبيق مباشرة بلا إعادة دخول */
