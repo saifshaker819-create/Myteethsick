@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>مواعيدي — حجز عيادة الأسنان</title>
+<meta name="theme-color" content="#00695C">
+<!-- الاتصال مقصور على سيرفر العيادة وحده -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; manifest-src blob:; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── نفس لغة برنامج العيادة البصرية: المراجع يفتح تطبيقاً يعرف
+   أنه تطبيق عيادته، لا برنامجاً غريباً. لكنه أهدأ بكثير — يُفتح
+   مرات قليلة في السنة، لا طوال الدوام. ── */
+:root{
+  --bg:#E8EFF1;
+  --blob1:#7FD8CB; --blob2:#9CC8F0; --blob3:#F2D3B8;
+  --glass:rgba(255,255,255,.62);
+  --glass2:rgba(255,255,255,.44);
+  --glassS:rgba(255,255,255,.78);
+  --stroke:rgba(255,255,255,.75);
+  --edge:rgba(10,50,58,.10);
+  --ink:#06232B; --ink2:#31555F; --ink3:#5D7F89;
+  --br:#00736A; --br2:#00A594; --brL:rgba(0,115,106,.13);
+  --on-br:#FFFFFF;
+  --ok:#12784A; --okL:rgba(18,120,74,.14);
+  --wr:#9A6400; --wrL:rgba(154,100,0,.15);
+  --bd:#B23A2C; --bdL:rgba(178,58,44,.14);
+  --sh:0 1px 1px rgba(6,35,43,.04), 0 8px 24px -14px rgba(6,35,43,.30);
+  --shL:0 2px 6px rgba(6,35,43,.06), 0 24px 50px -26px rgba(6,35,43,.45);
+  --r:18px; --blur:blur(18px) saturate(150%);
+}
+html[data-theme=dark]{
+  --bg:#050D10;
+  --blob1:#065A55; --blob2:#0A3352; --blob3:#3A2418;
+  --glass:rgba(20,38,42,.62); --glass2:rgba(20,38,42,.42);
+  --glassS:rgba(24,44,49,.86);
+  --stroke:rgba(255,255,255,.10); --edge:rgba(255,255,255,.07);
+  --ink:#E9F5F3; --ink2:#A8C6C2; --ink3:#7C9C98;
+  --br:#12C9AE; --br2:#3FE8CE; --brL:rgba(18,201,174,.16); --on-br:#03211D;
+  --ok:#2FD08A; --okL:rgba(47,208,138,.16);
+  --wr:#E0A93A; --wrL:rgba(224,169,58,.16);
+  --bd:#FF7A66; --bdL:rgba(255,122,102,.16);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:'Zain',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+  font-size:15px;line-height:1.6;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* هالات لونية هادئة في الخلفية — نفس أثر برنامج العيادة */
+body::before{
+  content:'';position:fixed;inset:-25%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(38% 32% at 18% 12%, var(--blob1) 0%, transparent 62%),
+    radial-gradient(42% 36% at 84% 22%, var(--blob2) 0%, transparent 64%),
+    radial-gradient(40% 34% at 50% 96%, var(--blob3) 0%, transparent 62%);
+  opacity:.5;filter:blur(46px);
+}
+.wrap{max-width:560px;margin:0 auto;padding:16px 14px 96px}
+.hide{display:none!important}
+.gr{flex:1;min-width:0}
+.ctr{text-align:center}
+.row{display:flex;align-items:center;gap:10px}
+.wv{flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:9px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mt{margin-top:11px}.mt2{margin-top:18px}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tiny{font-size:12px;color:var(--ink2);font-weight:600}
+.h1{font-size:26px;font-weight:900;letter-spacing:-.02em;line-height:1.25}
+.h2{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.h3{font-size:15.5px;font-weight:800}
+.lbl{font-size:12px;font-weight:800;color:var(--ink3);letter-spacing:.03em}
+.mono{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+.card{
+  background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--stroke);border-radius:var(--r);padding:16px;
+  box-shadow:var(--sh);margin-top:12px;
+}
+.card.flat{background:var(--glass2);box-shadow:none}
+
+label.lb{display:block;font-size:12.5px;font-weight:800;color:var(--ink2);margin-bottom:5px}
+input,select,textarea{
+  width:100%;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);
+  background:var(--glassS);border:1px solid var(--stroke);border-radius:13px;
+  padding:12px 13px;outline:none;transition:border-color .18s,box-shadow .18s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 4px var(--brL)}
+input.err{border-color:var(--bd);background:var(--bdL)}
+textarea{min-height:84px;resize:vertical;line-height:1.6}
+
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 18px;border-radius:14px;font-size:15px;font-weight:800;
+  background:var(--br);color:var(--on-br);box-shadow:var(--sh);
+  transition:transform .12s,filter .18s;
+}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.w{width:100%}
+.btn.gh{background:var(--glass2);color:var(--ink);border:1px solid var(--stroke);box-shadow:none}
+.btn.sm{padding:9px 13px;font-size:13.5px;border-radius:11px}
+.lnk{color:var(--br);font-weight:800;font-size:13.5px;text-decoration:underline;
+     text-underline-offset:3px;padding:7px}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;
+      font-size:12px;font-weight:800;background:var(--glass2);border:1px solid var(--edge)}
+.pill.g{background:var(--okL);color:var(--ok);border-color:transparent}
+.pill.w{background:var(--wrL);color:var(--wr);border-color:transparent}
+.pill.r{background:var(--bdL);color:var(--bd);border-color:transparent}
+
+.al{display:flex;gap:9px;align-items:flex-start;padding:11px 13px;border-radius:13px;
+    font-size:13.5px;font-weight:700;line-height:1.55;margin-top:11px}
+.al.g{background:var(--okL);color:var(--ok)}
+.al.w{background:var(--wrL);color:var(--wr)}
+.al.r{background:var(--bdL);color:var(--bd)}
+
+.it{display:flex;align-items:center;gap:11px;padding:13px;border-radius:14px;
+    background:var(--glass2);border:1px solid var(--stroke);cursor:pointer;
+    transition:transform .12s,border-color .18s}
+.it:active{transform:scale(.99)}
+.it:hover{border-color:var(--br)}
+.av{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:grid;place-items:center;
+    background:var(--brL);color:var(--br);font-weight:900;font-size:16px}
+
+.emp{padding:26px 16px;text-align:center;color:var(--ink3);font-weight:700;font-size:13.5px}
+.spin{width:22px;height:22px;border:2.5px solid var(--edge);border-top-color:var(--br);
+      border-radius:99px;animation:sp .7s linear infinite;margin:22px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── العنصر المميّز: بطاقة الموعد ──
+   الحجز في الواقع ورقة يُريها المراجع للاستقبال. فالبطاقة تُقصّ
+   من الجانب كتذكرة، وحالتها هي البطل لا زخرفة حولها. */
+.tk{position:relative;overflow:hidden;padding:0;margin-top:12px;
+    background:var(--glassS);border:1px solid var(--stroke);border-radius:var(--r);
+    box-shadow:var(--shL)}
+.tk .top{padding:16px 16px 13px}
+.tk .cut{position:relative;height:1px;background:repeating-linear-gradient(
+  to left, var(--edge) 0 7px, transparent 7px 14px)}
+.tk .cut::before,.tk .cut::after{
+  content:'';position:absolute;top:-9px;width:18px;height:18px;border-radius:99px;
+  background:var(--bg);border:1px solid var(--edge)}
+.tk .cut::before{inset-inline-start:-10px}
+.tk .cut::after{inset-inline-end:-10px}
+.tk .bot{padding:13px 16px 15px;display:flex;align-items:center;gap:11px}
+.tk .when{font-size:21px;font-weight:900;letter-spacing:-.01em}
+
+.tabs{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;
+  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border-top:1px solid var(--stroke);padding:7px 8px calc(7px + env(safe-area-inset-bottom))}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 4px;border-radius:13px;color:var(--ink3);font-size:11px;font-weight:800;
+  transition:color .18s,background .18s}
+.tabs button.on{color:var(--br);background:var(--brL)}
+.tabs .ic{font-size:19px;line-height:1}
+
+/* الباركود داخل البطاقة */
+.bcbtn{width:38px;height:38px;border-radius:12px;flex-shrink:0;
+  background:var(--brL);color:var(--br);font-size:13px;font-weight:900;
+  letter-spacing:-1px;border:1px solid var(--edge);transition:transform .12s}
+.bcbtn:active{transform:scale(.94)}
+.bcbox{padding:0 16px 15px;animation:up .28s cubic-bezier(.2,.9,.3,1)}
+.bcpaper{background:#fff;border-radius:13px;padding:12px;border:1px solid var(--edge)}
+.bcnum{color:#000;text-align:center;font-family:monospace;font-weight:800;
+  font-size:21px;letter-spacing:.24em;margin-top:7px}
+
+/* شريط التثبيت — نفس شكل برنامج العيادة */
+#instbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
+  z-index:50;padding:0 12px;display:flex;justify-content:center}
+#instbar .box{display:flex;align-items:center;gap:11px;width:100%;max-width:536px;
+  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--stroke);border-radius:16px;padding:10px 12px;box-shadow:var(--shL);
+  animation:up .35s cubic-bezier(.2,.9,.3,1)}
+#instbar img{width:38px;height:38px;border-radius:11px;flex-shrink:0}
+#instbar .nm{font-weight:900;font-size:14.5px}
+#instbar .ds{font-size:11.5px;color:var(--ink2);font-weight:600;line-height:1.4}
+#instbar .x{width:28px;height:28px;border-radius:9px;color:var(--ink3);flex-shrink:0;
+  font-size:14px;background:var(--glass2)}
+
+.toast{position:fixed;inset-inline:0;bottom:88px;z-index:60;display:flex;justify-content:center;
+       pointer-events:none;padding:0 16px}
+.toast div{background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--stroke);border-radius:14px;padding:12px 17px;box-shadow:var(--shL);
+  font-weight:800;font-size:14px;max-width:100%;animation:up .3s cubic-bezier(.2,.9,.3,1)}
+.toast div.s{color:var(--ok)} .toast div.e{color:var(--bd)}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- ═══ الدخول والتسجيل ═══ -->
+  <div id="auth">
+    <div class="ctr" style="padding:34px 0 6px">
+      <img src="" id="au-logo" alt="" style="width:74px;height:74px;border-radius:20px;
+        box-shadow:var(--shL)">
+      <div class="h1 mt">مواعيدي</div>
+      <div class="tiny mt" id="au-tag">احجز موعدك في عيادة الأسنان</div>
+    </div>
+
+    <div class="card" id="au-cfgwarn" style="display:none">
+      <div class="al w"><span>!</span><span>لم يُضبط الاتصال بالسيرفر بعد</span></div>
+    </div>
+
+    <!-- دخول -->
+    <div class="card" id="au-in">
+      <label class="lb">البريد الإلكتروني</label>
+      <input id="in-email" type="email" dir="ltr" inputmode="email" autocomplete="username" spellcheck="false">
+      <div class="mt"><label class="lb">كلمة المرور</label>
+        <input id="in-pass" type="password" dir="ltr" autocomplete="current-password"></div>
+      <div id="in-err" class="al r hide"></div>
+      <button class="btn w mt2" id="in-go">دخول</button>
+      <div class="ctr mt2">
+        <button class="lnk" id="to-reg">ما عندك حساب؟ سجّل الآن</button>
+      </div>
+      <div class="ctr"><button class="lnk" id="to-rs"
+        style="color:var(--ink3)">نسيت كلمة المرور؟</button></div>
+    </div>
+
+    <!-- استعادة كلمة المرور: رمز يُنسخ ويُلصق، لا رابط يفتح
+         متصفحاً آخر ويضيع -->
+    <div class="card hide" id="au-rs">
+      <div class="ctr">
+        <div style="font-size:38px;line-height:1">🔑</div>
+        <div class="h2 mt">استعادة كلمة المرور</div>
+        <div class="tiny mt">اكتب بريدك ليصلك رمز تأكيد من ٦ أرقام</div>
+      </div>
+      <div class="mt2"><label class="lb">البريد الإلكتروني</label>
+        <input id="rs-mail" type="email" dir="ltr" inputmode="email" spellcheck="false"></div>
+      <button class="btn w mt2" id="rs-send">إرسال الرمز</button>
+
+      <div id="rs-step2" class="hide">
+        <div class="al g"><span>✓</span><span>أُرسل الرمز — افحص بريدك<br>
+          <span class="tiny">إن لم تجد الرسالة، افحص مجلد الرسائل المزعجة</span></span></div>
+        <div class="mt"><label class="lb">رمز التأكيد</label>
+          <input id="rs-code" inputmode="numeric" dir="ltr" maxlength="6" placeholder="123456"
+            style="letter-spacing:.4em;text-align:center;font-size:21px;font-weight:800"></div>
+        <div class="mt"><label class="lb">كلمة المرور الجديدة</label>
+          <input id="rs-pass" type="password" dir="ltr" autocomplete="new-password"></div>
+        <button class="btn w mt2" id="rs-go">تغيير كلمة المرور</button>
+      </div>
+
+      <div id="rs-err" class="al r hide"></div>
+      <div class="ctr mt2"><button class="lnk" id="rs-back">رجوع للدخول</button></div>
+    </div>
+
+    <!-- تأكيد البريد: شاشة ثابتة لا رسالة عابرة، لأن المراجع
+         يحتاج أن يترك التطبيق ويفتح بريده ثم يعود -->
+    <div class="card hide" id="au-vfy">
+      <div class="ctr">
+        <div style="font-size:40px;line-height:1">📩</div>
+        <div class="h2 mt">أكّد بريدك</div>
+        <div class="tiny mt">أرسلنا رسالة إلى</div>
+        <div class="mono" id="vf-mail"
+             style="font-weight:800;margin-top:3px;word-break:break-all"></div>
+      </div>
+
+      <div class="al w"><span>!</span><span>
+        الحساب لا يعمل قبل التأكيد. هذه خطوة لمرة واحدة، تمنع أن يسجّل
+        أحد ببريدك.</span></div>
+
+      <div class="card flat">
+        <div class="lbl">كيف تؤكّد — ثلاث خطوات</div>
+        <div class="col mt">
+          <div class="row" style="align-items:flex-start">
+            <div class="av" style="width:27px;height:27px;font-size:13px">1</div>
+            <div class="gr" style="font-weight:700;font-size:13.5px">
+              افتح تطبيق البريد على هاتفك</div>
+          </div>
+          <div class="row" style="align-items:flex-start">
+            <div class="av" style="width:27px;height:27px;font-size:13px">2</div>
+            <div class="gr" style="font-weight:700;font-size:13.5px">
+              افتح رسالة <b>Confirm your email address</b>
+              <div class="tiny">إن لم تجدها، شوف مجلد الرسائل المزعجة (Spam)</div>
+            </div>
+          </div>
+          <div class="row" style="align-items:flex-start">
+            <div class="av" style="width:27px;height:27px;font-size:13px">3</div>
+            <div class="gr" style="font-weight:700;font-size:13.5px">
+              اضغط <b>Confirm email address</b>
+              <div class="tiny">لو فتحت صفحة فيها خطأ، لا يهم — التأكيد تمّ فعلاً</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vf-err" class="al r hide"></div>
+      <button class="btn w mt2" id="vf-done">أكّدت — دخول</button>
+      <div class="row mt" style="gap:8px">
+        <button class="btn gh gr" id="vf-again">إعادة إرسال الرسالة</button>
+        <button class="btn gh gr" id="vf-back">تغيير البريد</button>
+      </div>
+    </div>
+
+    <!-- تسجيل -->
+    <div class="card hide" id="au-reg">
+      <div class="h3">حساب جديد</div>
+      <div class="tiny mt">تُحفظ معلوماتك مرة واحدة وتُملأ تلقائياً في كل حجز.</div>
+      <div class="g2 mt2">
+        <div><label class="lb">الاسم الأول *</label><input id="rg-n1"></div>
+        <div><label class="lb">اسم الأب *</label><input id="rg-n2"></div>
+      </div>
+      <div class="g2 mt">
+        <div><label class="lb">اسم الجد *</label><input id="rg-n3"></div>
+        <div><label class="lb">اللقب</label><input id="rg-n4"></div>
+      </div>
+      <div class="g2 mt">
+        <div><label class="lb">العمر *</label>
+          <input id="rg-age" type="number" inputmode="numeric" min="1" max="120"></div>
+        <div><label class="lb">الجنس *</label>
+          <select id="rg-sex"><option value="male">ذكر</option><option value="female">أنثى</option></select></div>
+      </div>
+      <div class="mt"><label class="lb">رقم الهاتف *</label>
+        <input id="rg-phone" type="tel" dir="ltr" inputmode="tel"></div>
+      <div class="mt"><label class="lb">البريد الإلكتروني *</label>
+        <input id="rg-email" type="email" dir="ltr" inputmode="email" spellcheck="false"></div>
+      <div class="mt"><label class="lb">كلمة المرور * <span class="tiny">(٨ خانات فأكثر)</span></label>
+        <input id="rg-pass" type="password" dir="ltr" autocomplete="new-password"></div>
+      <div id="rg-err" class="al r hide"></div>
+      <button class="btn w mt2" id="rg-go">إنشاء الحساب</button>
+      <div class="ctr mt2"><button class="lnk" id="to-in">عندي حساب — دخول</button></div>
+    </div>
+  </div>
+
+  <!-- ═══ التطبيق ═══ -->
+  <div id="app" class="hide">
+    <div class="row" style="padding:6px 2px 0">
+      <div class="gr">
+        <div class="h2" id="pg-title"></div>
+        <div class="tiny" id="pg-sub"></div>
+      </div>
+      <button class="btn gh sm" id="theme">◐</button>
+    </div>
+    <div id="view"></div>
+  </div>
+</div>
+
+<div class="tabs hide" id="tabs">
+  <button data-t="home"><span class="ic">🎫</span><span>مواعيدي</span></button>
+  <button data-t="book"><span class="ic">＋</span><span>احجز</span></button>
+  <button data-t="me"><span class="ic">👤</span><span>حسابي</span></button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/*═══════════════ أدوات ═══════════════*/
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = x => String(x ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+const today = () => { const d = new Date();
+  return new Date(d - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+const fmtD = d => !d ? '—' : new Date(d).toLocaleDateString('ar-IQ',
+  { weekday:'short', day:'numeric', month:'short' });
+
+function toast(msg, kind){
+  const box = $('#toast');
+  box.innerHTML = `<div class="${kind||''}">${esc(msg)}</div>`;
+  clearTimeout(box._t);
+  box._t = setTimeout(() => box.innerHTML = '', 2600);
+}
+const spin = () => '<div class="spin"></div>';
+
+/*═══════════════ السيرفر ═══════════════
+  نفس أسلوب برنامج العيادة: fetch مباشر بلا مكتبات، والإعدادات
+  في الجهاز لا في الكود.
+═════════════════════════════════════*/
+/*═══════════════ إعدادات السيرفر ═══════════════
+  ★ المكان الوحيد الذي تعدّله: الصق مفتاحك في CLOUD_KEY أدناه —
+    نفس المفتاح المستعمل في برنامج العيادة.
+═══════════════════════════════════════════════*/
+const CLOUD_URL = 'https://eziaplhqcgaoqpfphddh.supabase.co';
+const CLOUD_KEY = 'sb_publishable_KQWQDnHTsfEcY4VFUAtm5g_5nfEciOc';
+
+const Cloud = {
+  cfg:{ url:CLOUD_URL, key:CLOUD_KEY }, session:null, me:null,
+
+  load(){
+    /* العنوان والمفتاح من الملف لا من الجهاز — لا ضبط يدوي */
+    this.cfg = { url:CLOUD_URL.replace(/\/+$/,''), key:CLOUD_KEY };
+    try { this.session = JSON.parse(localStorage.getItem('pt_sess')) || null; }
+    catch(_){ this.session = null; }
+  },
+  ready(){ return !!(this.cfg.url && this.cfg.key); },
+  saveSess(v){
+    this.session = v;
+    try {
+      if (v) localStorage.setItem('pt_sess', JSON.stringify(v));
+      else   localStorage.removeItem('pt_sess');
+    } catch(_){}
+  },
+
+  async call(path, { method='GET', body=null, auth=true, raw=false } = {}){
+    if (!this.ready()) throw new Error('لم يُضبط الاتصال بالسيرفر');
+    const h = { apikey:this.cfg.key, 'Content-Type':'application/json' };
+    h.Authorization = 'Bearer ' +
+      ((auth && this.session?.token) ? this.session.token : this.cfg.key);
+    let r;
+    try { r = await fetch(this.cfg.url + path,
+      { method, headers:h, body: body ? JSON.stringify(body) : undefined }); }
+    catch(_){ throw new Error('تعذّر الوصول إلى السيرفر — تحقّق من الإنترنت'); }
+
+    const txt = await r.text();
+    let data = null;
+    try { data = txt ? JSON.parse(txt) : null; } catch(_){ data = txt; }
+    if (raw) return { ok:r.ok, status:r.status, data };
+    if (!r.ok) throw new Error(String(
+      data?.error_description || data?.msg || data?.message || data?.error || r.status));
+    return data;
+  },
+
+  async signIn(email, password){
+    const d = await this.call('/auth/v1/token?grant_type=password',
+      { method:'POST', auth:false, body:{ email, password } });
+    this.saveSess({ token:d.access_token, refresh:d.refresh_token,
+                    exp: Date.now() + Number(d.expires_in||3600)*1000, email });
+    return this.whoami();
+  },
+
+  async signUp(email, password){
+    const r = await this.call('/auth/v1/signup',
+      { method:'POST', auth:false, body:{ email, password }, raw:true });
+    if (!r.ok) throw new Error(String(
+      r.data?.msg || r.data?.error_description || r.data?.message || 'تعذّر إنشاء الحساب'));
+    /* بعض الإعدادات تُرجع تذكرة فوراً، وبعضها تطلب تأكيد البريد */
+    if (r.data?.access_token){
+      this.saveSess({ token:r.data.access_token, refresh:r.data.refresh_token,
+                      exp: Date.now() + 3600000, email });
+      return true;
+    }
+    return false;
+  },
+
+  async whoami(){
+    this.me = await this.call('/rest/v1/rpc/whoami', { method:'POST', body:{} });
+    return this.me;
+  },
+
+  async refresh(){
+    if (!this.session?.refresh) return false;
+    try {
+      const d = await this.call('/auth/v1/token?grant_type=refresh_token',
+        { method:'POST', auth:false, body:{ refresh_token:this.session.refresh } });
+      this.saveSess({ token:d.access_token, refresh:d.refresh_token,
+                      exp: Date.now() + Number(d.expires_in||3600)*1000,
+                      email:this.session.email });
+      return true;
+    } catch(_){ this.saveSess(null); return false; }
+  },
+
+  /* التذكرة قصيرة العمر — تُجدَّد قبل أي نداء يقترب انتهاؤها */
+  async fresh(){
+    if (this.session && this.session.exp - Date.now() < 60000) await this.refresh();
+  },
+
+  async signOut(){
+    try { await this.call('/auth/v1/logout', { method:'POST' }); } catch(_){}
+    this.saveSess(null); this.me = null;
+  },
+};
+
+/*═══════════════ الباركود ═══════════════
+  Code39 — نفس الترميز المستعمل في برنامج العيادة، فما يظهر على
+  هاتف المراجع يقرؤه ماسح الاستقبال مباشرة.
+═══════════════════════════════════════*/
+const C39 = {
+  map:{'0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw',
+       '5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+       'A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn',
+       'F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn',
+       'K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn',
+       'P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn',
+       'U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn',
+       'Z':'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','*':'nwnnwnwnn'},
+
+  /* النجمة رمز البداية والنهاية في Code39 — بدونها لا يقرأ أي ماسح */
+  bars(text){
+    const s = '*' + String(text).toUpperCase().replace(/[^0-9A-Z\-. ]/g,'') + '*';
+    const N = 1.1, W = 2.9;
+    let x = 0, out = [];
+    for (const ch of s){
+      const pat = this.map[ch]; if (!pat) continue;
+      for (let i = 0; i < 9; i++){
+        const w = pat[i] === 'w' ? W : N;
+        if (i % 2 === 0) out.push([x, w]);
+        x += w;
+      }
+      x += N;
+    }
+    return { out, w:x };
+  },
+
+  svg(text, h = 74){
+    const { out, w } = this.bars(text);
+    const rects = out.map(([x, bw]) =>
+      `<rect x="${x.toFixed(2)}" y="0" width="${bw}" height="${h}" fill="#000"/>`).join('');
+    return `<svg viewBox="0 0 ${w.toFixed(0)} ${h}" preserveAspectRatio="none"
+      style="width:100%;height:${h}px;background:#fff;display:block">${rects}</svg>`;
+  },
+
+  /* صورة PNG للتنزيل: الصورة تبقى في الهاتف ولو أُغلق التطبيق */
+  png(text, label){
+    const { out, w } = this.bars(text);
+    const SC = 3, H = 90, PAD = 18, FT = 34;
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * SC) + PAD * 2;
+    c.height = H + PAD * 2 + FT;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#000';
+    for (const [x, bw] of out) g.fillRect(PAD + x * SC, PAD, bw * SC, H);
+    g.font = 'bold 28px monospace';
+    g.textAlign = 'center';
+    g.fillText(String(label || text), c.width / 2, PAD + H + 28);
+    return c.toDataURL('image/png');
+  },
+};
+
+/*═══════════════ الحالة ═══════════════*/
+const S = { tab:'home', profile:null, clinic:null, clinics:null };
+
+/*═══════════════ الدخول ═══════════════*/
+const Auth = {
+  waiting:'',        /* البريد الذي ينتظر التأكيد */
+
+  show(which){
+    $('#au-in').classList.toggle('hide',  which !== 'in');
+    $('#au-reg').classList.toggle('hide', which !== 'reg');
+    $('#au-vfy').classList.toggle('hide', which !== 'vfy');
+    $('#au-rs').classList.toggle('hide',  which !== 'rs');
+    $('#rs-err')?.classList.add('hide');
+    $('#vf-err')?.classList.add('hide');
+    $('#au-cfgwarn').style.display = Cloud.ready() ? 'none' : 'block';
+    if (!Cloud.ready()) $('#au-cfgwarn').querySelector('span:last-child').textContent =
+      'المفتاح غير مضبوط في الملف — راجع CLOUD_KEY في أعلى الكود';
+    $('#in-err').classList.add('hide');
+    $('#rg-err').classList.add('hide');
+  },
+
+  err(id, msg){ const e = $(id); e.textContent = msg; e.classList.remove('hide'); },
+
+  /*──── استعادة كلمة المرور ────*/
+  async rsSend(){
+    const mail = ($('#rs-mail').value || '').trim().toLowerCase();
+    const err = $('#rs-err');
+    const show = m => { err.textContent = m; err.classList.remove('hide'); };
+    err.classList.add('hide');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return show('اكتب بريدك أولاً');
+
+    const b = $('#rs-send'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
+    try {
+      await Cloud.call('/auth/v1/recover',
+        { method:'POST', auth:false, body:{ email:mail } });
+      $('#rs-step2').classList.remove('hide');
+      setTimeout(() => $('#rs-code')?.focus(), 100);
+    } catch (e) { show(String(e.message || e)); }
+    finally { b.disabled = false; b.textContent = 'إرسال الرمز'; }
+  },
+
+  async rsGo(){
+    const err = $('#rs-err');
+    const show = m => { err.textContent = m; err.classList.remove('hide'); };
+    err.classList.add('hide');
+    const mail = ($('#rs-mail').value || '').trim().toLowerCase();
+    const code = ($('#rs-code').value || '').trim();
+    const pass = $('#rs-pass').value || '';
+    if (!/^\d{6}$/.test(code)) return show('الرمز ٦ أرقام');
+    if (pass.length < 8)        return show('كلمة المرور ٨ خانات فأكثر');
+
+    const b = $('#rs-go'); b.disabled = true; b.textContent = 'جارٍ التغيير…';
+    try {
+      /* الرمز يُبادَل بتذكرة مؤقّتة، وبها تُغيَّر كلمة المرور */
+      const d = await Cloud.call('/auth/v1/verify', { method:'POST', auth:false,
+        body:{ type:'recovery', email:mail, token:code } });
+      if (!d?.access_token) return show('الرمز غير صحيح أو انتهت صلاحيته');
+      Cloud.saveSess({ token:d.access_token, refresh:d.refresh_token,
+                       exp: Date.now() + 3600000, email:mail });
+      await Cloud.call('/auth/v1/user', { method:'PUT', body:{ password:pass } });
+      Cloud.saveSess(null);
+      toast('تغيّرت كلمة المرور — سجّل الدخول', 's');
+      $('#in-email').value = mail;
+      this.show('in');
+      setTimeout(() => $('#in-pass')?.focus(), 120);
+    } catch (e) {
+      const m = String(e.message || e);
+      show(/token|expired|invalid/i.test(m) ? 'الرمز غير صحيح أو انتهت صلاحيته' : m);
+    } finally { b.disabled = false; b.textContent = 'تغيير كلمة المرور'; }
+  },
+
+  /* شاشة الانتظار — يُحفظ البريد فتعود إليها لو أُغلق التطبيق */
+  await1(email){
+    this.waiting = email;
+    try { localStorage.setItem('pt_wait', email); } catch(_){}
+    $('#vf-mail').textContent = email;
+    this.show('vfy');
+  },
+
+  clearWait(){
+    this.waiting = '';
+    try { localStorage.removeItem('pt_wait'); } catch(_){}
+  },
+
+  /* «أكّدت — دخول»: يُعاد المحاولة بنفس البيانات */
+  async confirmed(){
+    const b = $('#vf-done'); b.disabled = true; b.textContent = 'جارٍ التحقّق…';
+    try {
+      const pass = sessionStorage.getItem('pt_tmp') || '';
+      if (!pass){
+        this.clearWait();
+        $('#in-email').value = this.waiting;
+        toast('سجّل الدخول الآن', 's');
+        return this.show('in');
+      }
+      const me = await Cloud.signIn(this.waiting, pass);
+      sessionStorage.removeItem('pt_tmp');
+      this.clearWait();
+      if (!me || me.role === 'none') return this.finishProfile();
+      App.enter(me);
+    } catch (e) {
+      const m = String(e.message || e);
+      const el = $('#vf-err');
+      el.textContent = /not confirmed/i.test(m)
+        ? 'ما زال البريد غير مؤكّد — افتح الرسالة واضغط الرابط ثم أعد المحاولة'
+        : m;
+      el.classList.remove('hide');
+    } finally { b.disabled = false; b.textContent = 'أكّدت — دخول'; }
+  },
+
+  /* الحساب أُنشئ لكن معلوماته لم تُحفظ بعد (أُغلق التطبيق قبلها) */
+  async finishProfile(){
+    const d = JSON.parse(sessionStorage.getItem('pt_prof') || 'null');
+    if (!d){ toast('أكمل معلوماتك', 'e'); return this.show('reg'); }
+    await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:d });
+    sessionStorage.removeItem('pt_prof');
+    App.enter(await Cloud.whoami());
+  },
+
+  async resend(){
+    const b = $('#vf-again'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
+    try {
+      await Cloud.call('/auth/v1/resend',
+        { method:'POST', auth:false, body:{ type:'signup', email:this.waiting } });
+      toast('أُرسلت الرسالة مرة أخرى', 's');
+    } catch (e) {
+      const el = $('#vf-err');
+      el.textContent = String(e.message || e); el.classList.remove('hide');
+    } finally { b.disabled = false; b.textContent = 'إعادة إرسال الرسالة'; }
+  },
+
+  async signIn(){
+    const email = $('#in-email').value.trim().toLowerCase();
+    const pass  = $('#in-pass').value;
+    if (!email || !pass) return this.err('#in-err', 'أكمل البريد وكلمة المرور');
+    const b = $('#in-go'); b.disabled = true; b.textContent = 'جارٍ الدخول…';
+    try {
+      const me = await Cloud.signIn(email, pass);
+      if (!me || me.role !== 'patient'){
+        await Cloud.signOut();
+        return this.err('#in-err',
+          me?.role && me.role !== 'none'
+            ? 'هذا حساب عيادة — استعمل برنامج العيادة'
+            : 'الحساب غير مكتمل — أنشئ حساب مراجع');
+      }
+      App.enter(me);
+    } catch (e) {
+      const m = String(e.message || e);
+      /* البريد غير المؤكّد ليس خطأ دخول — يُوجَّه لا يُلام */
+      if (/not confirmed/i.test(m)){
+        try { sessionStorage.setItem('pt_tmp', pass); } catch(_){}
+        return this.await1(email);
+      }
+      if (/api key/i.test(m))
+        return this.err('#in-err', 'مفتاح الاتصال غير صحيح — راجع CLOUD_KEY في الملف');
+      this.err('#in-err', /invalid|credential|grant/i.test(m)
+        ? 'البريد أو كلمة المرور غير صحيحة' : m);
+    } finally { b.disabled = false; b.textContent = 'دخول'; }
+  },
+
+  async register(){
+    const v = id => ($('#'+id).value || '').trim();
+    if (!v('rg-n1') || !v('rg-n2') || !v('rg-n3'))
+      return this.err('#rg-err', 'الاسم الأول واسم الأب والجد مطلوبة');
+    const age = Number(v('rg-age'));
+    if (!age || age < 1 || age > 120) return this.err('#rg-err', 'أدخل عمراً صحيحاً');
+    if (v('rg-phone').replace(/\D/g,'').length < 10)
+      return this.err('#rg-err', 'رقم الهاتف غير مكتمل');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('rg-email')))
+      return this.err('#rg-err', 'البريد الإلكتروني غير صحيح');
+    if (v('rg-pass').length < 8) return this.err('#rg-err', 'كلمة المرور ٨ خانات فأكثر');
+
+    const b = $('#rg-go'); b.disabled = true; b.textContent = 'جارٍ الإنشاء…';
+    try {
+      const email = v('rg-email').toLowerCase();
+      /* يُحفظ العمر كتاريخ ميلاد تقريبي فلا يقادم مع السنين */
+      const birth = new Date(new Date().getFullYear() - age, 0, 1)
+        .toISOString().slice(0,10);
+      const prof = {
+        p_n1:v('rg-n1'), p_n2:v('rg-n2'), p_n3:v('rg-n3'), p_n4:v('rg-n4'),
+        p_sex: $('#rg-sex').value === 'female' ? 'f' : 'm',
+        p_birth: birth, p_phone: v('rg-phone'),
+      };
+      /* يبقيان في ذاكرة الجلسة وحدها: يُمحيان بإغلاق التبويب،
+         ولا يُكتبان على القرص. */
+      try {
+        sessionStorage.setItem('pt_prof', JSON.stringify(prof));
+        sessionStorage.setItem('pt_tmp', v('rg-pass'));
+      } catch(_){}
+
+      const signed = await Cloud.signUp(email, v('rg-pass'));
+      if (!signed) return this.await1(email);   /* ينتظر التأكيد */
+
+      await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:prof });
+      sessionStorage.removeItem('pt_prof');
+      sessionStorage.removeItem('pt_tmp');
+      App.enter(await Cloud.whoami());
+    } catch (e) {
+      const m = String(e.message || e);
+      this.err('#rg-err', /already|registered|exists/i.test(m)
+        ? 'هذا البريد مسجّل سابقاً — سجّل الدخول' : m);
+    } finally { b.disabled = false; b.textContent = 'إنشاء الحساب'; }
+  },
+
+};
+
+/*═══════════════ الشاشات ═══════════════*/
+const App = {
+  async enter(me){
+    S.profile = me;
+    $('#auth').classList.add('hide');
+    $('#app').classList.remove('hide');
+    $('#tabs').classList.remove('hide');
+    this.setTab('home');
+  },
+
+  name(){
+    const p = S.profile || {};
+    return [p.n1, p.n2, p.n3, p.n4].filter(Boolean).join(' ') || '—';
+  },
+
+  setTab(t){
+    S.tab = t;
+    $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+    window.scrollTo({ top:0 });
+    this.draw();
+  },
+
+  draw(){
+    const titles = { home:['مواعيدي','حجوزاتك وحالتها'],
+                     book:['احجز موعد','اختر العيادة ثم الوقت'],
+                     me:['حسابي','معلوماتك وكلمة المرور'] };
+    const [a, b] = titles[S.tab];
+    $('#pg-title').textContent = a;
+    $('#pg-sub').textContent = b;
+    if (S.tab === 'home') return Book.mine();
+    if (S.tab === 'book') return Book.clinics();
+    return Me.draw();
+  },
+};
+
+/*═══════════════ الحجز ═══════════════*/
+const Book = {
+  /*──── حجوزاتي ────*/
+  async mine(){
+    const v = $('#view'); v.innerHTML = spin();
+    try {
+      await Cloud.fresh();
+      const rows = await Cloud.call('/rest/v1/rpc/my_bookings', { method:'POST', body:{} });
+      if (!rows.length){
+        v.innerHTML = `<div class="card ctr" style="padding:30px 18px">
+          <div style="font-size:40px">🎫</div>
+          <div class="h3 mt">ما عندك مواعيد بعد</div>
+          <div class="tiny mt">اختر عيادة واحجز موعدك الأول.</div>
+          <button class="btn mt2" onclick="App.setTab('book')">احجز موعد</button>
+        </div>`;
+        return;
+      }
+      v.innerHTML = rows.map(r => this.ticket(r)).join('');
+    } catch (e) { v.innerHTML = this.oops(e); }
+  },
+
+  /* بطاقة الموعد: الحالة هي البطل، والتاريخ يليها */
+  ticket(r){
+    const st = { pending:['w','قيد المراجعة','بانتظار موافقة العيادة'],
+                 accepted:['g','مقبول','احضر في الموعد'],
+                 declined:['r','مرفوض','راجع العيادة لموعد آخر'] }[r.status]
+             || ['','—',''];
+    const d = r.doc || {};
+    return `<div class="tk">
+      <div class="top">
+        <div class="row">
+          <span class="pill ${st[0]}">${st[1]}</span>
+          <div class="gr"></div>
+          <span class="tiny mono">${esc((r.id||'').slice(0,6))}</span>
+        </div>
+        <div class="when mt">${fmtD(d.day)}${d.time ? ' · ' + esc(d.time) : ''}</div>
+        <div class="tiny">${esc(st[2])}</div>
+      </div>
+      <div class="cut"></div>
+      <div class="bot">
+        <div class="av">🏥</div>
+        <div class="gr">
+          <div class="h3 ell">${esc(r.clinic_name || '—')}</div>
+          <div class="tiny ell">${esc(d.complaint || 'مراجعة عامة')}</div>
+        </div>
+        ${r.code ? `<button class="bcbtn" onclick="Book.code('${r.id}')"
+          title="الباركود">▮▮▮</button>` : ''}
+      </div>
+      ${r.code ? `<div class="bcbox hide" id="bc-${r.id}">
+        <div class="lbl ctr">رمز المراجع</div>
+        <div class="bcpaper">
+          ${C39.svg(r.code, 66)}
+          <div class="bcnum">${esc(r.code)}</div>
+        </div>
+        <button class="btn gh w mt" onclick="Book.dl('${r.id}','${esc(r.code)}')">
+          ⬇ تنزيل الباركود</button>
+      </div>` : ''}
+    </div>`;
+  },
+
+  /* الباركود يُطوى داخل البطاقة نفسها — لا يفتح شاشة جديدة */
+  code(id){
+    const box = document.getElementById('bc-' + id);
+    if (!box) return;
+    box.classList.toggle('hide');
+    if (!box.classList.contains('hide'))
+      box.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  },
+
+  dl(id, code){
+    try {
+      const a = document.createElement('a');
+      a.href = C39.png(code, code);
+      a.download = `barcode-${code}.png`;
+      a.click();
+      toast('نُزّل الباركود', 's');
+    } catch(_){ toast('تعذّر التنزيل', 'e'); }
+  },
+
+  oops(e){
+    return `<div class="card"><div class="al r"><span>!</span>
+      <span>${esc(String(e.message || e))}</span></div>
+      <button class="btn gh w mt2" onclick="App.draw()">إعادة المحاولة</button></div>`;
+  },
+
+  /*──── دليل العيادات ────*/
+  async clinics(){
+    const v = $('#view');
+    v.innerHTML = `<div class="card">
+        <label class="lb">ابحث عن عيادة</label>
+        <input id="cq" placeholder="اسم العيادة أو الطبيب أو المنطقة">
+      </div><div id="clist">${spin()}</div>`;
+    $('#cq').oninput = () => this.filter();
+    try {
+      await Cloud.fresh();
+      S.clinics = await Cloud.call(
+        '/rest/v1/clinics?select=id,name,doctor_name,area,gov,phone,kind' +
+        '&kind=eq.clinic&active=is.true&order=name');
+      this.filter();
+    } catch (e) { $('#clist').innerHTML = this.oops(e); }
+  },
+
+  filter(){
+    const q = ($('#cq')?.value || '').trim().toLowerCase();
+    const list = (S.clinics || []).filter(c => !q ||
+      [c.name, c.doctor_name, c.area, c.gov].some(x =>
+        String(x || '').toLowerCase().includes(q)));
+    $('#clist').innerHTML = list.length
+      ? `<div class="col mt">${list.map(c => `
+          <div class="it" onclick="Book.form('${c.id}')">
+            <div class="av">${esc((c.name || '?').charAt(0))}</div>
+            <div class="gr">
+              <div class="h3 ell">${esc(c.name)}</div>
+              <div class="tiny ell">${esc(c.doctor_name || '')}${
+                c.area ? ' · ' + esc(c.area) : ''}${c.gov ? ' · ' + esc(c.gov) : ''}</div>
+            </div>
+            <span style="color:var(--ink3)">‹</span>
+          </div>`).join('')}</div>`
+      : `<div class="emp">ما لكينا عيادة بهذا الاسم</div>`;
+  },
+
+  /*──── نموذج الحجز ────*/
+  form(cid){
+    const c = (S.clinics || []).find(x => x.id === cid);
+    if (!c) return;
+    S.clinic = c;
+    const p = S.profile || {};
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    const tomorrow = new Date(d - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+
+    $('#view').innerHTML = `
+      <div class="card">
+        <div class="row">
+          <div class="av">${esc((c.name || '?').charAt(0))}</div>
+          <div class="gr">
+            <div class="h3 ell">${esc(c.name)}</div>
+            <div class="tiny ell">${esc(c.doctor_name || '')}</div>
+          </div>
+          <button class="btn gh sm" onclick="App.setTab('book')">تغيير</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="lbl">معلوماتك</div>
+        <div class="al g"><span>✓</span><span>
+          ${esc(App.name())} · ${p.sex === 'f' ? 'أنثى' : 'ذكر'} · ${esc(p.phone || '')}
+        </span></div>
+        <div class="tiny mt">تُرسل مع الحجز. عدّلها من «حسابي».</div>
+      </div>
+
+      <div class="card">
+        <div class="g2">
+          <div><label class="lb">اليوم *</label>
+            <input id="b-day" type="date" value="${tomorrow}" min="${today()}"></div>
+          <div><label class="lb">الوقت *</label>
+            <input id="b-time" type="time" value="10:00"></div>
+        </div>
+        <div class="mt"><label class="lb">سبب المراجعة *</label>
+          <textarea id="b-comp" placeholder="مثلاً: ألم في ضرس سفلي يمين منذ ثلاثة أيام"></textarea></div>
+      </div>
+
+      <div class="card">
+        <div class="lbl">وضعك الصحي</div>
+        <div class="tiny mt">يحتاجها الطبيب قبل أي إجراء. اختر ما ينطبق عليك.</div>
+        <div class="col mt2" id="b-mh">
+          ${this.MH.filter(m => !m.f || p.sex === 'f').map(m => `
+            <div>
+              <label class="it" style="cursor:pointer">
+                <input type="checkbox" value="${m.c}" data-d="${m.d?1:0}"
+                  onchange="Book.detail(this)"
+                  style="width:20px;height:20px;flex:0 0 auto">
+                <span class="gr" style="font-weight:700;font-size:14px">${esc(m.ar)}</span>
+              </label>
+              ${m.d ? `<input class="hide mt" id="d-${m.c}"
+                placeholder="${esc(m.dl || 'اكتب التفاصيل')}">` : ''}
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div id="b-err" class="al r hide"></div>
+      <button class="btn w mt2" id="b-go" onclick="Book.save()">تأكيد الحجز</button>
+      <div style="height:12px"></div>`;
+  },
+
+  /* الأسئلة نفسها التي يعتمدها برنامج العيادة — الاثنان يقرآن
+     المفاتيح ذاتها، فما يجيب عنه المراجع هنا يظهر هناك كما هو.
+     f:1 يعني سؤالاً نسائياً لا يظهر للذكور.
+     d:1 يعني أن الإجابة بنعم تفتح حقل تفصيل. */
+  MH:[
+    { c:'health_good', ar:'هل صحتك جيده؟' },
+    { c:'valves', ar:'هل لديك خلل في صمامات القلب او صمامات مزروعه؟', d:1 },
+    { c:'congenital', ar:'هل لديك مشاكل في القلب وراثية / ولاديه؟', d:1 },
+    { c:'diabetes', ar:'هل لديك مرض السكر؟', d:1 },
+    { c:'syncope', ar:'هل لديك حالات اغماء او نوبات فقدان وعي او صرع؟', d:1 },
+    { c:'hepatitis', ar:'هل اصبت سابقا بالتهاب الكبد الفايروسي؟', d:1 },
+    { c:'allergy_any', ar:'هل لديك حساسيه من أي نوع او مشاكل الجيوب الانفيه او ربو؟', d:1 },
+    { c:'gi_ulcer', ar:'هل لديك مشاكل الجهاز الهضمي او قرحة المعده؟' },
+    { c:'anemia', ar:'هل لديك فقر دم او أي مشاكل تتعلق بنقل الدم؟' },
+    { c:'meds_now', ar:'هل انت مستمر على استعمال ادويه معينه حاليا؟', d:1 },
+    { c:'bp', ar:'هل لديك مشاكل ضغط الدم؟', d:1 },
+    { c:'pacemaker', ar:'هل لديك جهاز تنظيم ضربات القلب؟' },
+    { c:'cardiac', ar:'هل لديك أي مشكله بالقلب أو الشرايين، نوبة قلبيه سابقة/ ذبحه/ انسداد او تصلب الشرايين التاجيه؟', d:1 },
+    { c:'allergy_drug', ar:'هل لديك حساسية لادويه معينه او ممنوع طبيا من استعمال ادويه معينه؟', d:1, dl:'اسم الدواء' },
+    { c:'infectious', ar:'هل انت حامل لاي مرض معدي؟', d:1 },
+    { c:'bleeding', ar:'هل لديك حالات نزف غير متوقف سابقا لاي سبب؟', d:1 },
+    { c:'tb_resp', ar:'هل لديك تدرن او مشاكل بالرئه والجهاز التنفسي؟', d:1 },
+    { c:'cancer_tx', ar:'هل تستعمل علاج للسرطان بالاشعه او العلاج الكيميائي؟', d:1 },
+    { c:'kidney', ar:'هل لديك مشاكل تتعلق بالكلى؟' },
+    { c:'pregnant', ar:'هل انت حامل؟', d:1, dl:'حامل بأي شهر؟', f:1 },
+    { c:'nursing', ar:'هل انت مرضع؟', d:1, dl:'كم عمر الطفل الرضيع؟', f:1 },
+    { c:'gyneco', ar:'هل لديك مشاكل نسائيه؟', d:1, f:1 },
+  ],
+
+  /* الإجابة بنعم تفتح حقل التفصيل — الطبيب يحتاج «أي دواء» لا «نعم» فقط */
+  detail(box){
+    const f = $('#d-' + box.value);
+    if (!f) return;
+    f.classList.toggle('hide', !box.checked);
+    if (box.checked) f.focus(); else f.value = '';
+  },
+
+  async save(){
+    const err = $('#b-err');
+    const show = m => { err.textContent = m; err.classList.remove('hide');
+                        window.scrollTo({ top:0, behavior:'smooth' }); };
+    err.classList.add('hide');
+
+    const day  = $('#b-day').value;
+    const time = $('#b-time').value;
+    const comp = $('#b-comp').value.trim();
+    if (!day || !time) return show('اختر اليوم والوقت');
+    if (day < today())  return show('اليوم المختار مضى — اختر يوماً قادماً');
+    if (comp.length < 4) return show('اكتب سبب المراجعة');
+
+    /* القيمة نصّ التفصيل إن وُجد، وإلا ١ — نفس ما يتوقّعه برنامج العيادة */
+    const mh = {};
+    $$('#b-mh input[type=checkbox]:checked').forEach(i => {
+      const d = $('#d-' + i.value);
+      mh[i.value] = (d && d.value.trim()) ? d.value.trim() : 1;
+    });
+    if (!Object.keys(mh).length)
+      return show('اختر حالة صحية واحدة على الأقل، أو «صحتي جيدة»');
+
+    const p = S.profile || {};
+    const age = p.birth ? Math.max(1, new Date().getFullYear()
+      - new Date(p.birth).getFullYear()) : null;
+
+    /* الحجز يُرسل بالشكل الذي يقرأه برنامج العيادة تماماً */
+    const doc = {
+      id: uid(),
+      n1:p.n1 || '', n2:p.n2 || '', n3:p.n3 || '', n4:p.n4 || '',
+      age, gender: p.sex === 'f' ? 'female' : 'male',
+      phone:p.phone || '', address:'',
+      mh, complaint:comp, day, time,
+      st:'new', at: Date.now(),
+    };
+
+    const b = $('#b-go'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
+    try {
+      await Cloud.fresh();
+      await Cloud.call('/rest/v1/rpc/book_create',
+        { method:'POST', body:{ p_clinic:S.clinic.id, p_doc:doc } });
+      toast('أُرسل الحجز', 's');
+      App.setTab('home');
+    } catch (e) {
+      show(String(e.message || e));
+    } finally { b.disabled = false; b.textContent = 'تأكيد الحجز'; }
+  },
+};
+
+/*═══════════════ حسابي ═══════════════*/
+const Me = {
+  draw(){
+    const p = S.profile || {};
+    const age = p.birth ? new Date().getFullYear() - new Date(p.birth).getFullYear() : '';
+    $('#view').innerHTML = `
+      <div class="card">
+        <div class="row">
+          <div class="av" style="width:52px;height:52px;font-size:21px">
+            ${esc(App.name().charAt(0))}</div>
+          <div class="gr">
+            <div class="h3 ell">${esc(App.name())}</div>
+            <div class="tiny mono">${esc(Cloud.session?.email || '')}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="lbl">معلوماتي</div>
+        <div class="g2 mt">
+          <div><label class="lb">الاسم الأول</label><input id="m-n1" value="${esc(p.n1||'')}"></div>
+          <div><label class="lb">اسم الأب</label><input id="m-n2" value="${esc(p.n2||'')}"></div>
+        </div>
+        <div class="g2 mt">
+          <div><label class="lb">اسم الجد</label><input id="m-n3" value="${esc(p.n3||'')}"></div>
+          <div><label class="lb">اللقب</label><input id="m-n4" value="${esc(p.n4||'')}"></div>
+        </div>
+        <div class="g2 mt">
+          <div><label class="lb">العمر</label>
+            <input id="m-age" type="number" inputmode="numeric" value="${esc(age)}"></div>
+          <div><label class="lb">الجنس</label>
+            <select id="m-sex">
+              <option value="male" ${p.sex!=='f'?'selected':''}>ذكر</option>
+              <option value="female" ${p.sex==='f'?'selected':''}>أنثى</option>
+            </select></div>
+        </div>
+        <div class="mt"><label class="lb">رقم الهاتف</label>
+          <input id="m-phone" type="tel" dir="ltr" value="${esc(p.phone||'')}"></div>
+        <div id="m-err" class="al r hide"></div>
+        <button class="btn w mt2" id="m-go" onclick="Me.save()">حفظ التعديلات</button>
+      </div>
+
+      <div class="card">
+        <div class="lbl">كلمة المرور</div>
+        <div class="mt"><label class="lb">كلمة المرور الجديدة</label>
+          <input id="m-p1" type="password" dir="ltr" autocomplete="new-password"></div>
+        <div class="mt"><label class="lb">إعادة كتابتها</label>
+          <input id="m-p2" type="password" dir="ltr" autocomplete="new-password"></div>
+        <div id="m-perr" class="al r hide"></div>
+        <button class="btn gh w mt2" id="m-pgo" onclick="Me.pass()">تغيير كلمة المرور</button>
+      </div>
+
+      <button class="btn gh w mt2" onclick="Me.out()">خروج</button>
+      <div style="height:12px"></div>`;
+  },
+
+  async save(){
+    const v = id => ($('#'+id).value || '').trim();
+    const err = $('#m-err');
+    const show = m => { err.textContent = m; err.classList.remove('hide'); };
+    err.classList.add('hide');
+    if (!v('m-n1') || !v('m-n2') || !v('m-n3')) return show('الاسم الأول والأب والجد مطلوبة');
+    const age = Number(v('m-age'));
+    if (!age || age < 1 || age > 120) return show('أدخل عمراً صحيحاً');
+    if (v('m-phone').replace(/\D/g,'').length < 10) return show('رقم الهاتف غير مكتمل');
+
+    const b = $('#m-go'); b.disabled = true; b.textContent = 'جارٍ الحفظ…';
+    try {
+      await Cloud.fresh();
+      const birth = new Date(new Date().getFullYear() - age, 0, 1)
+        .toISOString().slice(0,10);
+      await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:{
+        p_n1:v('m-n1'), p_n2:v('m-n2'), p_n3:v('m-n3'), p_n4:v('m-n4'),
+        p_sex: $('#m-sex').value === 'female' ? 'f' : 'm',
+        p_birth: birth, p_phone: v('m-phone'),
+      }});
+      S.profile = await Cloud.whoami();
+      toast('حُفظت التعديلات', 's');
+      this.draw();
+    } catch (e) { show(String(e.message || e)); }
+    finally { b.disabled = false; b.textContent = 'حفظ التعديلات'; }
+  },
+
+  async pass(){
+    const err = $('#m-perr');
+    const show = m => { err.textContent = m; err.classList.remove('hide'); };
+    err.classList.add('hide');
+    const a = $('#m-p1').value, b2 = $('#m-p2').value;
+    if (a.length < 8) return show('كلمة المرور ٨ خانات فأكثر');
+    if (a !== b2)     return show('الكلمتان غير متطابقتين');
+    const b = $('#m-pgo'); b.disabled = true; b.textContent = 'جارٍ التغيير…';
+    try {
+      await Cloud.fresh();
+      await Cloud.call('/auth/v1/user', { method:'PUT', body:{ password:a } });
+      $('#m-p1').value = ''; $('#m-p2').value = '';
+      toast('تغيّرت كلمة المرور', 's');
+    } catch (e) { show(String(e.message || e)); }
+    finally { b.disabled = false; b.textContent = 'تغيير كلمة المرور'; }
+  },
+
+  async out(){
+    if (!confirm('خروج من الحساب؟')) return;
+    await Cloud.signOut();
+    S.profile = null;
+    $('#app').classList.add('hide');
+    $('#tabs').classList.add('hide');
+    $('#auth').classList.remove('hide');
+    Auth.show('in');
+  },
+};
+
+
+/*═══════════════ الأيقونة والتثبيت ═══════════════
+  الأيقونة نفسها المستعملة في برنامج العيادة: المراجع يعرف من
+  الشاشة الرئيسية أنه تطبيق عيادته، لا برنامجاً غريباً.
+═════════════════════════════════════════════════*/
+const APP = { nameAr:'مواعيدي', nameEn:'My appointments',
+              green:'#00796B', green2:'#00A88F' };
+
+const ICON = {
+  cache:{},
+  svg(size, maskable){
+    const pad = maskable ? 0.19 : 0;
+    const r   = maskable ? 0 : size * 0.22;
+    const sz  = size * (1 - pad * 2), o = size * pad;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${APP.green2}"/><stop offset="1" stop-color="${APP.green}"/>
+      </linearGradient></defs>
+      <rect width="${size}" height="${size}" rx="${r}" fill="url(#g)"/>
+      <g transform="translate(${o} ${o}) scale(${sz/24})">
+        <path fill="#FFFFFF" d="M12 3c-3 0-4-1.2-6 0C4 4.2 3.4 7 4 10c.5 2.6 1.3 4 1.8 6.6.4 2 .6 4.4 2 4.4 1.6 0 1.3-2.6 1.8-4.6.4-1.6.8-2.4 2.4-2.4s2 .8 2.4 2.4c.5 2 .2 4.6 1.8 4.6 1.4 0 1.6-2.4 2-4.4.5-2.6 1.3-4 1.8-6.6.6-3 0-5.8-2-7-2-1.2-3 0-6 0z"/>
+      </g></svg>`;
+  },
+  dataSvg(size, maskable){
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(this.svg(size, maskable))));
+  },
+  /* PNG أوثق للتثبيت: أنظمة التشغيل لا تقبل SVG دائماً */
+  png(size, maskable){
+    const key = size + (maskable ? 'm' : '');
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        c.getContext('2d').drawImage(img, 0, 0, size, size);
+        this.cache[key] = c.toDataURL('image/png');
+        res(this.cache[key]);
+      };
+      img.onerror = () => res(this.dataSvg(size, maskable));
+      img.src = this.dataSvg(size, maskable);
+    });
+  },
+};
+
+const Install = {
+  prompt:null,
+
+  async manifest(){
+    const [i192, i512, m512] = await Promise.all([
+      ICON.png(192,false), ICON.png(512,false), ICON.png(512,true),
+    ]);
+    const man = {
+      id:'asnani-my-appointments',
+      name:`${APP.nameAr} — ${APP.nameEn}`,
+      short_name:APP.nameAr,
+      description:'حجز مواعيد عيادة الأسنان',
+      start_url:location.href.split('#')[0],
+      scope:'./', display:'standalone', orientation:'any',
+      background_color:'#E8EFF1', theme_color:APP.green,
+      dir:'rtl', lang:'ar',
+      icons:[
+        { src:i192, sizes:'192x192', type:'image/png', purpose:'any' },
+        { src:i512, sizes:'512x512', type:'image/png', purpose:'any' },
+        { src:m512, sizes:'512x512', type:'image/png', purpose:'maskable' },
+      ],
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(man)],
+      { type:'application/manifest+json' }));
+    const put = (rel, href, type) => {
+      let l = document.querySelector(`link[rel="${rel}"]`);
+      if (!l){ l = document.createElement('link'); l.rel = rel; document.head.appendChild(l); }
+      if (type) l.type = type;
+      l.href = href;
+    };
+    put('manifest', url);
+    put('apple-touch-icon', i192);   /* آيفون لا يقرأ manifest */
+    put('icon', i192, 'image/png');
+  },
+
+  standalone(){
+    return matchMedia('(display-mode: standalone)').matches
+        || navigator.standalone === true;
+  },
+  isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; },
+
+  init(){
+    this.manifest();
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault(); this.prompt = e; this.bar();
+    });
+    window.addEventListener('appinstalled', () => {
+      this.prompt = null;
+      try { localStorage.setItem('pt_installed','1'); } catch(_){}
+      this.hide(); toast('تم تثبيت التطبيق', 's');
+    });
+    /* آيفون لا يطلق الحدث — يُعرض الإرشاد بعد لحظة */
+    if (this.isIOS() && !this.standalone() && !localStorage.getItem('pt_inst_x'))
+      setTimeout(() => this.bar(), 1400);
+  },
+
+  bar(){
+    if (this.standalone() || localStorage.getItem('pt_inst_x')) return;
+    if (document.getElementById('instbar')) return;
+    const d = document.createElement('div');
+    d.id = 'instbar';
+    d.innerHTML = `<div class="box">
+      <img src="${ICON.dataSvg(160,false)}" alt="">
+      <div class="gr" style="min-width:0">
+        <div class="nm">${APP.nameAr}</div>
+        <div class="ds">${this.isIOS()
+          ? 'من زر المشاركة ← أضف إلى الشاشة الرئيسية'
+          : 'ثبّته ليفتح كتطبيق ويصلك أسرع'}</div>
+      </div>
+      ${this.isIOS() ? '' : '<button class="btn sm" id="inst-go">تثبيت</button>'}
+      <button class="x" id="inst-x">✕</button>
+    </div>`;
+    document.body.appendChild(d);
+    d.querySelector('#inst-x').onclick = () => this.dismiss();
+    d.querySelector('#inst-go')?.addEventListener('click', () => this.go());
+  },
+
+  hide(){ document.getElementById('instbar')?.remove(); },
+  dismiss(){ try { localStorage.setItem('pt_inst_x','1'); } catch(_){} this.hide(); },
+
+  async go(){
+    if (!this.prompt) return this.help();
+    this.prompt.prompt();
+    const r = await this.prompt.userChoice.catch(() => null);
+    this.prompt = null;
+    if (r?.outcome === 'accepted') this.hide();
+  },
+
+  /* سبب دقيق بدل رسالة مبهمة */
+  help(){
+    const https = location.protocol === 'https:' ||
+                  ['localhost','127.0.0.1'].includes(location.hostname);
+    toast(https ? 'من قائمة المتصفح ← تثبيت التطبيق'
+                : 'التثبيت يحتاج فتح التطبيق عبر رابط https', 'e');
+  },
+};
+window.installApp = () => Install.go();
+
+/*═══════════════ الإقلاع ═══════════════*/
+(function boot(){
+  /* المظهر يتبع الجهاز ما لم يختر المراجع غيره */
+  const saved = localStorage.getItem('pt_theme');
+  const dark = saved ? saved === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  $('#theme').onclick = () => {
+    const now = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', now);
+    try { localStorage.setItem('pt_theme', now); } catch(_){}
+  };
+
+  $('#au-logo').src = ICON.dataSvg(256, false);
+  Cloud.load();
+  $('#in-go').onclick  = () => Auth.signIn();
+  $('#rg-go').onclick  = () => Auth.register();
+  $('#to-reg').onclick  = () => Auth.show('reg');
+  $('#to-rs').onclick    = () => {
+    $('#rs-mail').value = ($('#in-email').value || '').trim();
+    Auth.show('rs');
+  };
+  $('#rs-send').onclick  = () => Auth.rsSend();
+  $('#rs-go').onclick    = () => Auth.rsGo();
+  $('#rs-back').onclick  = () => Auth.show('in');
+  $('#vf-done').onclick  = () => Auth.confirmed();
+  $('#vf-again').onclick = () => Auth.resend();
+  $('#vf-back').onclick  = () => { Auth.clearWait(); Auth.show('reg'); };
+  $('#to-in').onclick  = () => Auth.show('in');
+  $('#in-pass').onkeydown  = e => { if (e.key === 'Enter') Auth.signIn(); };
+  $('#in-email').onkeydown = e => { if (e.key === 'Enter') $('#in-pass').focus(); };
+  $$('#tabs button').forEach(b => b.onclick = () => App.setTab(b.dataset.t));
+
+  Install.init();
+  /* من أُغلق تطبيقه وهو ينتظر التأكيد يعود إلى مكانه لا إلى البداية */
+  const wait = localStorage.getItem('pt_wait');
+  if (wait){ Auth.waiting = wait; $('#vf-mail').textContent = wait; Auth.show('vfy'); }
+  else Auth.show('in');
+
+  /* جلسة محفوظة: يُفتح التطبيق مباشرة بلا إعادة دخول */
+  if (Cloud.session && Cloud.ready()){
+    (async () => {
+      try {
+        await Cloud.fresh();
+        const me = await Cloud.whoami();
+        if (me && me.role === 'patient') App.enter(me);
+      } catch(_){ Cloud.saveSess(null); }
+    })();
+  }
+})();
+</script>
+</body>
+</html>
