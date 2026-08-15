@@ -161,6 +161,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tabs button.on{color:var(--br);background:var(--brL)}
 .tabs .ic{font-size:19px;line-height:1}
 
+/* الباركود داخل البطاقة */
+.bcbtn{width:38px;height:38px;border-radius:12px;flex-shrink:0;
+  background:var(--brL);color:var(--br);font-size:13px;font-weight:900;
+  letter-spacing:-1px;border:1px solid var(--edge);transition:transform .12s}
+.bcbtn:active{transform:scale(.94)}
+.bcbox{padding:0 16px 15px;animation:up .28s cubic-bezier(.2,.9,.3,1)}
+.bcpaper{background:#fff;border-radius:13px;padding:12px;border:1px solid var(--edge)}
+.bcnum{color:#000;text-align:center;font-family:monospace;font-weight:800;
+  font-size:21px;letter-spacing:.24em;margin-top:7px}
+
 /* شريط التثبيت — نفس شكل برنامج العيادة */
 #instbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
   z-index:50;padding:0 12px;display:flex;justify-content:center}
@@ -211,6 +221,35 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="ctr mt2">
         <button class="lnk" id="to-reg">ما عندك حساب؟ سجّل الآن</button>
       </div>
+      <div class="ctr"><button class="lnk" id="to-rs"
+        style="color:var(--ink3)">نسيت كلمة المرور؟</button></div>
+    </div>
+
+    <!-- استعادة كلمة المرور: رمز يُنسخ ويُلصق، لا رابط يفتح
+         متصفحاً آخر ويضيع -->
+    <div class="card hide" id="au-rs">
+      <div class="ctr">
+        <div style="font-size:38px;line-height:1">🔑</div>
+        <div class="h2 mt">استعادة كلمة المرور</div>
+        <div class="tiny mt">اكتب بريدك ليصلك رمز تأكيد من ٦ أرقام</div>
+      </div>
+      <div class="mt2"><label class="lb">البريد الإلكتروني</label>
+        <input id="rs-mail" type="email" dir="ltr" inputmode="email" spellcheck="false"></div>
+      <button class="btn w mt2" id="rs-send">إرسال الرمز</button>
+
+      <div id="rs-step2" class="hide">
+        <div class="al g"><span>✓</span><span>أُرسل الرمز — افحص بريدك<br>
+          <span class="tiny">إن لم تجد الرسالة، افحص مجلد الرسائل المزعجة</span></span></div>
+        <div class="mt"><label class="lb">رمز التأكيد</label>
+          <input id="rs-code" inputmode="numeric" dir="ltr" maxlength="6" placeholder="123456"
+            style="letter-spacing:.4em;text-align:center;font-size:21px;font-weight:800"></div>
+        <div class="mt"><label class="lb">كلمة المرور الجديدة</label>
+          <input id="rs-pass" type="password" dir="ltr" autocomplete="new-password"></div>
+        <button class="btn w mt2" id="rs-go">تغيير كلمة المرور</button>
+      </div>
+
+      <div id="rs-err" class="al r hide"></div>
+      <div class="ctr mt2"><button class="lnk" id="rs-back">رجوع للدخول</button></div>
     </div>
 
     <!-- تأكيد البريد: شاشة ثابتة لا رسالة عابرة، لأن المراجع
@@ -430,6 +469,63 @@ const Cloud = {
   },
 };
 
+/*═══════════════ الباركود ═══════════════
+  Code39 — نفس الترميز المستعمل في برنامج العيادة، فما يظهر على
+  هاتف المراجع يقرؤه ماسح الاستقبال مباشرة.
+═══════════════════════════════════════*/
+const C39 = {
+  map:{'0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw',
+       '5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+       'A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn',
+       'F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn',
+       'K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn',
+       'P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn',
+       'U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn',
+       'Z':'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','*':'nwnnwnwnn'},
+
+  /* النجمة رمز البداية والنهاية في Code39 — بدونها لا يقرأ أي ماسح */
+  bars(text){
+    const s = '*' + String(text).toUpperCase().replace(/[^0-9A-Z\-. ]/g,'') + '*';
+    const N = 1.1, W = 2.9;
+    let x = 0, out = [];
+    for (const ch of s){
+      const pat = this.map[ch]; if (!pat) continue;
+      for (let i = 0; i < 9; i++){
+        const w = pat[i] === 'w' ? W : N;
+        if (i % 2 === 0) out.push([x, w]);
+        x += w;
+      }
+      x += N;
+    }
+    return { out, w:x };
+  },
+
+  svg(text, h = 74){
+    const { out, w } = this.bars(text);
+    const rects = out.map(([x, bw]) =>
+      `<rect x="${x.toFixed(2)}" y="0" width="${bw}" height="${h}" fill="#000"/>`).join('');
+    return `<svg viewBox="0 0 ${w.toFixed(0)} ${h}" preserveAspectRatio="none"
+      style="width:100%;height:${h}px;background:#fff;display:block">${rects}</svg>`;
+  },
+
+  /* صورة PNG للتنزيل: الصورة تبقى في الهاتف ولو أُغلق التطبيق */
+  png(text, label){
+    const { out, w } = this.bars(text);
+    const SC = 3, H = 90, PAD = 18, FT = 34;
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * SC) + PAD * 2;
+    c.height = H + PAD * 2 + FT;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#000';
+    for (const [x, bw] of out) g.fillRect(PAD + x * SC, PAD, bw * SC, H);
+    g.font = 'bold 28px monospace';
+    g.textAlign = 'center';
+    g.fillText(String(label || text), c.width / 2, PAD + H + 28);
+    return c.toDataURL('image/png');
+  },
+};
+
 /*═══════════════ الحالة ═══════════════*/
 const S = { tab:'home', profile:null, clinic:null, clinics:null };
 
@@ -441,6 +537,8 @@ const Auth = {
     $('#au-in').classList.toggle('hide',  which !== 'in');
     $('#au-reg').classList.toggle('hide', which !== 'reg');
     $('#au-vfy').classList.toggle('hide', which !== 'vfy');
+    $('#au-rs').classList.toggle('hide',  which !== 'rs');
+    $('#rs-err')?.classList.add('hide');
     $('#vf-err')?.classList.add('hide');
     $('#au-cfgwarn').style.display = Cloud.ready() ? 'none' : 'block';
     if (!Cloud.ready()) $('#au-cfgwarn').querySelector('span:last-child').textContent =
@@ -450,6 +548,54 @@ const Auth = {
   },
 
   err(id, msg){ const e = $(id); e.textContent = msg; e.classList.remove('hide'); },
+
+  /*──── استعادة كلمة المرور ────*/
+  async rsSend(){
+    const mail = ($('#rs-mail').value || '').trim().toLowerCase();
+    const err = $('#rs-err');
+    const show = m => { err.textContent = m; err.classList.remove('hide'); };
+    err.classList.add('hide');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return show('اكتب بريدك أولاً');
+
+    const b = $('#rs-send'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
+    try {
+      await Cloud.call('/auth/v1/recover',
+        { method:'POST', auth:false, body:{ email:mail } });
+      $('#rs-step2').classList.remove('hide');
+      setTimeout(() => $('#rs-code')?.focus(), 100);
+    } catch (e) { show(String(e.message || e)); }
+    finally { b.disabled = false; b.textContent = 'إرسال الرمز'; }
+  },
+
+  async rsGo(){
+    const err = $('#rs-err');
+    const show = m => { err.textContent = m; err.classList.remove('hide'); };
+    err.classList.add('hide');
+    const mail = ($('#rs-mail').value || '').trim().toLowerCase();
+    const code = ($('#rs-code').value || '').trim();
+    const pass = $('#rs-pass').value || '';
+    if (!/^\d{6}$/.test(code)) return show('الرمز ٦ أرقام');
+    if (pass.length < 8)        return show('كلمة المرور ٨ خانات فأكثر');
+
+    const b = $('#rs-go'); b.disabled = true; b.textContent = 'جارٍ التغيير…';
+    try {
+      /* الرمز يُبادَل بتذكرة مؤقّتة، وبها تُغيَّر كلمة المرور */
+      const d = await Cloud.call('/auth/v1/verify', { method:'POST', auth:false,
+        body:{ type:'recovery', email:mail, token:code } });
+      if (!d?.access_token) return show('الرمز غير صحيح أو انتهت صلاحيته');
+      Cloud.saveSess({ token:d.access_token, refresh:d.refresh_token,
+                       exp: Date.now() + 3600000, email:mail });
+      await Cloud.call('/auth/v1/user', { method:'PUT', body:{ password:pass } });
+      Cloud.saveSess(null);
+      toast('تغيّرت كلمة المرور — سجّل الدخول', 's');
+      $('#in-email').value = mail;
+      this.show('in');
+      setTimeout(() => $('#in-pass')?.focus(), 120);
+    } catch (e) {
+      const m = String(e.message || e);
+      show(/token|expired|invalid/i.test(m) ? 'الرمز غير صحيح أو انتهت صلاحيته' : m);
+    } finally { b.disabled = false; b.textContent = 'تغيير كلمة المرور'; }
+  },
 
   /* شاشة الانتظار — يُحفظ البريد فتعود إليها لو أُغلق التطبيق */
   await1(email){
@@ -666,8 +812,38 @@ const Book = {
           <div class="h3 ell">${esc(r.clinic_name || '—')}</div>
           <div class="tiny ell">${esc(d.complaint || 'مراجعة عامة')}</div>
         </div>
+        ${r.code ? `<button class="bcbtn" onclick="Book.code('${r.id}')"
+          title="الباركود">▮▮▮</button>` : ''}
       </div>
+      ${r.code ? `<div class="bcbox hide" id="bc-${r.id}">
+        <div class="lbl ctr">رمز المراجع</div>
+        <div class="bcpaper">
+          ${C39.svg(r.code, 66)}
+          <div class="bcnum">${esc(r.code)}</div>
+        </div>
+        <button class="btn gh w mt" onclick="Book.dl('${r.id}','${esc(r.code)}')">
+          ⬇ تنزيل الباركود</button>
+      </div>` : ''}
     </div>`;
+  },
+
+  /* الباركود يُطوى داخل البطاقة نفسها — لا يفتح شاشة جديدة */
+  code(id){
+    const box = document.getElementById('bc-' + id);
+    if (!box) return;
+    box.classList.toggle('hide');
+    if (!box.classList.contains('hide'))
+      box.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  },
+
+  dl(id, code){
+    try {
+      const a = document.createElement('a');
+      a.href = C39.png(code, code);
+      a.download = `barcode-${code}.png`;
+      a.click();
+      toast('نُزّل الباركود', 's');
+    } catch(_){ toast('تعذّر التنزيل', 'e'); }
   },
 
   oops(e){
@@ -1133,6 +1309,13 @@ window.installApp = () => Install.go();
   $('#in-go').onclick  = () => Auth.signIn();
   $('#rg-go').onclick  = () => Auth.register();
   $('#to-reg').onclick  = () => Auth.show('reg');
+  $('#to-rs').onclick    = () => {
+    $('#rs-mail').value = ($('#in-email').value || '').trim();
+    Auth.show('rs');
+  };
+  $('#rs-send').onclick  = () => Auth.rsSend();
+  $('#rs-go').onclick    = () => Auth.rsGo();
+  $('#rs-back').onclick  = () => Auth.show('in');
   $('#vf-done').onclick  = () => Auth.confirmed();
   $('#vf-again').onclick = () => Auth.resend();
   $('#vf-back').onclick  = () => { Auth.clearWait(); Auth.show('reg'); };
