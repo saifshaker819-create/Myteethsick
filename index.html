@@ -379,6 +379,9 @@ const spin = () => '<div class="spin"></div>';
   ★ المكان الوحيد الذي تعدّله: الصق مفتاحك في CLOUD_KEY أدناه —
     نفس المفتاح المستعمل في برنامج العيادة.
 ═══════════════════════════════════════════════*/
+/* عنوان العودة: رسائل هذا التطبيق تعود إليه لا إلى برنامج العيادة */
+const backHere = () => location.origin + location.pathname;
+
 const CLOUD_URL = 'https://eziaplhqcgaoqpfphddh.supabase.co';
 const CLOUD_KEY = 'sb_publishable_KQWQDnHTsfEcY4VFUAtm5g_5nfEciOc';
 
@@ -428,7 +431,8 @@ const Cloud = {
   },
 
   async signUp(email, password){
-    const r = await this.call('/auth/v1/signup',
+    const r = await this.call('/auth/v1/signup?redirect_to=' +
+      encodeURIComponent(backHere()),
       { method:'POST', auth:false, body:{ email, password }, raw:true });
     if (!r.ok) throw new Error(String(
       r.data?.msg || r.data?.error_description || r.data?.message || 'تعذّر إنشاء الحساب'));
@@ -559,7 +563,7 @@ const Auth = {
 
     const b = $('#rs-send'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
     try {
-      await Cloud.call('/auth/v1/recover',
+      await Cloud.call('/auth/v1/recover?redirect_to=' + encodeURIComponent(backHere()),
         { method:'POST', auth:false, body:{ email:mail } });
       $('#rs-step2').classList.remove('hide');
       setTimeout(() => $('#rs-code')?.focus(), 100);
@@ -648,7 +652,7 @@ const Auth = {
   async resend(){
     const b = $('#vf-again'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
     try {
-      await Cloud.call('/auth/v1/resend',
+      await Cloud.call('/auth/v1/resend?redirect_to=' + encodeURIComponent(backHere()),
         { method:'POST', auth:false, body:{ type:'signup', email:this.waiting } });
       toast('أُرسلت الرسالة مرة أخرى', 's');
     } catch (e) {
