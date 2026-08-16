@@ -239,7 +239,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
       <div id="rs-step2" class="hide">
         <div class="al g"><span>✓</span><span>أُرسل الرمز — افحص بريدك<br>
-          <span class="tiny">إن لم تجد الرسالة، افحص مجلد الرسائل المزعجة</span></span></div>
+          <span class="tiny">إن لم تجد الرسالة، افحص مجلد الرسائل المزعجة</span><br>
+          <span class="tiny">استعمل آخر رسالة وصلتك — أي طلب جديد يُبطل الرمز السابق</span></span></div>
         <div class="mt"><label class="lb">رمز التأكيد</label>
           <input id="rs-code" inputmode="numeric" dir="ltr" maxlength="8"
             autocomplete="one-time-code" placeholder="——————"
@@ -552,6 +553,10 @@ const Auth = {
     try {
       await Cloud.call('/auth/v1/recover?redirect_to=' + encodeURIComponent(backHere()),
         { method:'POST', auth:false, body:{ email:mail } });
+      /* كل رمز جديد يُبطل ما قبله */
+      this._used = false;
+      const cf = $('#rs-code'); if (cf) cf.value = '';
+      const gb = $('#rs-go');   if (gb) gb.disabled = false;
       $('#rs-step2').classList.remove('hide');
       setTimeout(() => $('#rs-code')?.focus(), 100);
     } catch (e) { show(String(e.message || e)); }
@@ -569,12 +574,15 @@ const Auth = {
     if (!/^\d{6}$|^\d{8}$/.test(code)) return show('اكتب الرمز كما وصلك');
     if (pass.length < 8)        return show('كلمة المرور ٨ خانات فأكثر');
 
-    const b = $('#rs-go'); b.disabled = true; b.textContent = 'جارٍ التغيير…';
+    const b = $('#rs-go');
+    if (b.disabled) return;                 /* ضغطة ثانية تُهمَل */
+    b.disabled = true; b.textContent = 'جارٍ التغيير…';
     try {
       /* الرمز يُبادَل بتذكرة مؤقّتة، وبها تُغيَّر كلمة المرور */
       const d = await Cloud.call('/auth/v1/verify', { method:'POST', auth:false,
         body:{ type:'recovery', email:mail, token:code } });
       if (!d?.access_token) return show('الرمز غير صحيح أو انتهت صلاحيته');
+      this._used = true;      /* الرمز مُستهلَك من هنا */
       Cloud.saveSess({ token:d.access_token, refresh:d.refresh_token,
                        exp: Date.now() + 3600000, email:mail });
       await Cloud.call('/auth/v1/user', { method:'PUT', body:{ password:pass } });
@@ -586,7 +594,10 @@ const Auth = {
     } catch (e) {
       const m = String(e.message || e);
       show(/token|expired|invalid/i.test(m) ? 'الرمز غير صحيح أو انتهت صلاحيته' : m);
-    } finally { b.disabled = false; b.textContent = 'تغيير كلمة المرور'; }
+    } finally {
+      b.disabled = !!this._used;
+      b.textContent = 'تغيير كلمة المرور';
+    }
   },
 
   /* شاشة الانتظار — يُحفظ البريد فتعود إليها لو أُغلق التطبيق */
