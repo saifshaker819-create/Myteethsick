@@ -269,35 +269,20 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         الحساب لا يعمل قبل التأكيد. هذه خطوة لمرة واحدة، تمنع أن يسجّل
         أحد ببريدك.</span></div>
 
-      <div class="card flat">
-        <div class="lbl">كيف تؤكّد — ثلاث خطوات</div>
-        <div class="col mt">
-          <div class="row" style="align-items:flex-start">
-            <div class="av" style="width:27px;height:27px;font-size:13px">1</div>
-            <div class="gr" style="font-weight:700;font-size:13.5px">
-              افتح تطبيق البريد على هاتفك</div>
-          </div>
-          <div class="row" style="align-items:flex-start">
-            <div class="av" style="width:27px;height:27px;font-size:13px">2</div>
-            <div class="gr" style="font-weight:700;font-size:13.5px">
-              افتح رسالة <b>Confirm your email address</b>
-              <div class="tiny">إن لم تجدها، شوف مجلد الرسائل المزعجة (Spam)</div>
-            </div>
-          </div>
-          <div class="row" style="align-items:flex-start">
-            <div class="av" style="width:27px;height:27px;font-size:13px">3</div>
-            <div class="gr" style="font-weight:700;font-size:13.5px">
-              اضغط <b>Confirm email address</b>
-              <div class="tiny">لو فتحت صفحة فيها خطأ، لا يهم — التأكيد تمّ فعلاً</div>
-            </div>
-          </div>
-        </div>
+      <div class="mt2">
+        <label class="lb">رمز التأكيد</label>
+        <input id="vf-code" inputmode="numeric" dir="ltr" maxlength="8"
+          autocomplete="one-time-code" placeholder="——————"
+          oninput="this.value=this.value.replace(/\D/g,'')"
+          style="letter-spacing:.32em;text-align:center;font-size:21px;font-weight:800">
+        <div class="tiny mt">افتح بريدك وانسخ الرمز. إن لم تجد الرسالة،
+          افحص مجلد الرسائل المزعجة (Spam).</div>
       </div>
 
       <div id="vf-err" class="al r hide"></div>
-      <button class="btn w mt2" id="vf-done">أكّدت — دخول</button>
+      <button class="btn w mt2" id="vf-done">تأكيد الحساب</button>
       <div class="row mt" style="gap:8px">
-        <button class="btn gh gr" id="vf-again">إعادة إرسال الرسالة</button>
+        <button class="btn gh gr" id="vf-again">إعادة إرسال الرمز</button>
         <button class="btn gh gr" id="vf-back">تغيير البريد</button>
       </div>
     </div>
@@ -433,8 +418,8 @@ const Cloud = {
   },
 
   async signUp(email, password){
-    const r = await this.call('/auth/v1/signup?redirect_to=' +
-      encodeURIComponent(backHere()),
+    /* بلا redirect_to: التأكيد صار برمز لا برابط */
+    const r = await this.call('/auth/v1/signup',
       { method:'POST', auth:false, body:{ email, password }, raw:true });
     if (!r.ok) throw new Error(String(
       r.data?.msg || r.data?.error_description || r.data?.message || 'تعذّر إنشاء الحساب'));
@@ -610,6 +595,7 @@ const Auth = {
     try { localStorage.setItem('pt_wait', email); } catch(_){}
     $('#vf-mail').textContent = email;
     this.show('vfy');
+    setTimeout(()=>$('#vf-code')?.focus(), 150);
   },
 
   clearWait(){
@@ -617,30 +603,45 @@ const Auth = {
     try { localStorage.removeItem('pt_wait'); } catch(_){}
   },
 
-  /* «أكّدت — دخول»: يُعاد المحاولة بنفس البيانات */
+  /* التأكيد بالرمز لا بالرابط: الرابط يفتح متصفحاً آخر وقد يضيع،
+     والرمز يُنسخ ويُلصق في الشاشة نفسها. */
   async confirmed(){
+    const el = $('#vf-err');
+    const show = m => { el.textContent = m; el.classList.remove('hide'); };
+    el.classList.add('hide');
+
+    const code = ($('#vf-code').value || '').trim();
+    if (!/^\d{6}$|^\d{8}$/.test(code)) return show('اكتب الرمز كما وصلك');
+
     const b = $('#vf-done'); b.disabled = true; b.textContent = 'جارٍ التحقّق…';
     try {
-      const pass = sessionStorage.getItem('pt_tmp') || '';
-      if (!pass){
-        this.clearWait();
-        $('#in-email').value = this.waiting;
-        toast('سجّل الدخول الآن', 's');
-        return this.show('in');
-      }
-      const me = await Cloud.signIn(this.waiting, pass);
+      /* الرمز يُبادَل بتذكرة — وبها يكتمل الحساب */
+      const d = await Cloud.call('/auth/v1/verify', { method:'POST', auth:false,
+        body:{ type:'signup', email:this.waiting, token:code } });
+      if (!d?.access_token) return show('الرمز غير صحيح أو انتهت صلاحيته');
+      Cloud.saveSess({ token:d.access_token, refresh:d.refresh_token,
+                       exp: Date.now() + 3600000, email:this.waiting });
+
+      /* معلومات التسجيل محفوظة في ذاكرة الجلسة — تُكتب الآن */
+      const prof = JSON.parse(sessionStorage.getItem('pt_prof') || 'null');
+      if (prof) await Cloud.call('/rest/v1/rpc/register_patient',
+        { method:'POST', body:prof });
+      sessionStorage.removeItem('pt_prof');
       sessionStorage.removeItem('pt_tmp');
       this.clearWait();
-      if (!me || me.role === 'none') return this.finishProfile();
+
+      const me = await Cloud.whoami();
+      if (!me || me.role !== 'patient'){
+        $('#in-email').value = this.waiting;
+        toast('أُكّد بريدك — سجّل الدخول', 's');
+        return this.show('in');
+      }
       App.enter(me);
     } catch (e) {
       const m = String(e.message || e);
-      const el = $('#vf-err');
-      el.textContent = /not confirmed/i.test(m)
-        ? 'ما زال البريد غير مؤكّد — افتح الرسالة واضغط الرابط ثم أعد المحاولة'
-        : m;
-      el.classList.remove('hide');
-    } finally { b.disabled = false; b.textContent = 'أكّدت — دخول'; }
+      show(/token|expired|invalid/i.test(m)
+        ? 'الرمز غير صحيح أو انتهت صلاحيته' : m);
+    } finally { b.disabled = false; b.textContent = 'تأكيد الحساب'; }
   },
 
   /* الحساب أُنشئ لكن معلوماته لم تُحفظ بعد (أُغلق التطبيق قبلها) */
@@ -655,9 +656,9 @@ const Auth = {
   async resend(){
     const b = $('#vf-again'); b.disabled = true; b.textContent = 'جارٍ الإرسال…';
     try {
-      await Cloud.call('/auth/v1/resend?redirect_to=' + encodeURIComponent(backHere()),
+      await Cloud.call('/auth/v1/resend',
         { method:'POST', auth:false, body:{ type:'signup', email:this.waiting } });
-      toast('أُرسلت الرسالة مرة أخرى', 's');
+      toast('أُرسل الرمز مرة أخرى', 's');
     } catch (e) {
       const el = $('#vf-err');
       el.textContent = String(e.message || e); el.classList.remove('hide');
@@ -724,7 +725,7 @@ const Auth = {
       } catch(_){}
 
       const signed = await Cloud.signUp(email, v('rg-pass'));
-      if (!signed) return this.await1(email);   /* ينتظر التأكيد */
+      if (!signed) return this.await1(email);   /* ينتظر رمز التأكيد */
 
       await Cloud.call('/rest/v1/rpc/register_patient', { method:'POST', body:prof });
       sessionStorage.removeItem('pt_prof');
@@ -1334,7 +1335,8 @@ window.installApp = () => Install.go();
   Install.init();
   /* من أُغلق تطبيقه وهو ينتظر التأكيد يعود إلى مكانه لا إلى البداية */
   const wait = localStorage.getItem('pt_wait');
-  if (wait){ Auth.waiting = wait; $('#vf-mail').textContent = wait; Auth.show('vfy'); }
+  if (wait){ Auth.waiting = wait; $('#vf-mail').textContent = wait; Auth.show('vfy');
+             setTimeout(()=>$('#vf-code')?.focus(), 150); }
   else Auth.show('in');
 
   /* جلسة محفوظة: يُفتح التطبيق مباشرة بلا إعادة دخول */
