@@ -231,7 +231,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="ctr">
         <div style="font-size:38px;line-height:1">🔑</div>
         <div class="h2 mt">استعادة كلمة المرور</div>
-        <div class="tiny mt">اكتب بريدك ليصلك رمز تأكيد من ٦ أرقام</div>
+        <div class="tiny mt">اكتب بريدك ليصلك رمز تأكيد</div>
       </div>
       <div class="mt2"><label class="lb">البريد الإلكتروني</label>
         <input id="rs-mail" type="email" dir="ltr" inputmode="email" spellcheck="false"></div>
@@ -241,8 +241,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         <div class="al g"><span>✓</span><span>أُرسل الرمز — افحص بريدك<br>
           <span class="tiny">إن لم تجد الرسالة، افحص مجلد الرسائل المزعجة</span></span></div>
         <div class="mt"><label class="lb">رمز التأكيد</label>
-          <input id="rs-code" inputmode="numeric" dir="ltr" maxlength="6" placeholder="123456"
-            style="letter-spacing:.4em;text-align:center;font-size:21px;font-weight:800"></div>
+          <input id="rs-code" inputmode="numeric" dir="ltr" maxlength="8"
+            autocomplete="one-time-code" placeholder="——————"
+            oninput="this.value=this.value.replace(/\\D/g,'')"
+            style="letter-spacing:.32em;text-align:center;font-size:21px;font-weight:800"></div>
         <div class="mt"><label class="lb">كلمة المرور الجديدة</label>
           <input id="rs-pass" type="password" dir="ltr" autocomplete="new-password"></div>
         <button class="btn w mt2" id="rs-go">تغيير كلمة المرور</button>
@@ -578,7 +580,8 @@ const Auth = {
     const mail = ($('#rs-mail').value || '').trim().toLowerCase();
     const code = ($('#rs-code').value || '').trim();
     const pass = $('#rs-pass').value || '';
-    if (!/^\d{6}$/.test(code)) return show('الرمز ٦ أرقام');
+    /* طول الرمز يقرّره السيرفر لا نحن — ستّة أو ثمانية */
+    if (!/^\d{6}$|^\d{8}$/.test(code)) return show('اكتب الرمز كما وصلك');
     if (pass.length < 8)        return show('كلمة المرور ٨ خانات فأكثر');
 
     const b = $('#rs-go'); b.disabled = true; b.textContent = 'جارٍ التغيير…';
