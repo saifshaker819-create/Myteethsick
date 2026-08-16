@@ -6,7 +6,7 @@
 <title>مواعيدي — حجز عيادة الأسنان</title>
 <meta name="theme-color" content="#00695C">
 <!-- الاتصال مقصور على سيرفر العيادة وحده -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; manifest-src blob:; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; manifest-src blob:; worker-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -829,7 +829,9 @@ const Book = {
         <div class="row">
           <span class="pill ${st[0]}">${st[1]}</span>
           <div class="gr"></div>
-          ${r.status === 'cancelled' ? ''
+          ${(r.status === 'cancelled' || r.status === 'declined')
+            ? `<button class="delx" title="حذف البطاقة نهائياً"
+                 onclick="Book.hide('${r.id}')">🗑</button>`
             : `<button class="delx" title="حذف الحجز"
                  onclick="Book.cancel('${r.id}','${r.status}','${esc(d.day||'')}')">✕</button>`}
         </div>
@@ -879,6 +881,18 @@ const Book = {
       await Cloud.call('/rest/v1/rpc/book_cancel',
         { method:'POST', body:{ p_id:id } });
       toast(past || status === 'pending' ? 'حُذف الحجز' : 'أُلغي الموعد وأُبلغت العيادة', 's');
+      this.mine();
+    } catch (e) { toast(String(e.message || e), 'e'); }
+  },
+
+  /* حذف البطاقة نهائياً — بعد الإلغاء أو الرفض فقط.
+     تختفي من قائمتك، ويبقى للعيادة أثر ما جرى. */
+  async hide(id){
+    if (!confirm('حذف هذه البطاقة نهائياً من قائمتك؟')) return;
+    try {
+      await Cloud.fresh();
+      await Cloud.call('/rest/v1/rpc/book_hide', { method:'POST', body:{ p_id:id } });
+      toast('حُذفت البطاقة', 's');
       this.mine();
     } catch (e) { toast(String(e.message || e), 'e'); }
   },
@@ -1299,8 +1313,21 @@ const Install = {
   },
   isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; },
 
+
+  /* عامل الخدمة: شرط عرض زر التثبيت المباشر على سطح المكتب.
+     يُسجَّل بصمت — وإن غاب الملف يبقى البرنامج يعمل كما هو،
+     ويكتفي بإرشاد التثبيت اليدوي. */
+  reg(){
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'https:' &&
+        !['localhost','127.0.0.1'].includes(location.hostname)) return;
+    const dir = location.href.split(/[?#]/)[0].replace(/[^/]*$/, '');
+    navigator.serviceWorker.register(dir + 'sw.js', { scope: dir })
+      .catch(() => { /* الملف غير مرفوع: لا يتعطّل شيء */ });
+  },
   init(){
     this.manifest();
+    this.reg();
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault(); this.prompt = e; this.bar();
     });
