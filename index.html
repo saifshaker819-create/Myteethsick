@@ -161,6 +161,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tabs button.on{color:var(--br);background:var(--brL)}
 .tabs .ic{font-size:19px;line-height:1}
 
+/* زر حذف الحجز — ناعم لا صارخ: الإلغاء تصرّف عادي لا خطر */
+.delx{width:30px;height:30px;border-radius:10px;flex-shrink:0;
+  color:var(--ink3);font-size:14px;font-weight:800;line-height:1;
+  background:var(--glass2);border:1px solid var(--edge);
+  transition:color .18s,background .18s,transform .12s,box-shadow .18s}
+.delx:hover{color:var(--bd);background:var(--bdL);border-color:transparent;
+  box-shadow:0 0 12px -4px var(--bd)}
+.delx:active{transform:scale(.9)}
+
 /* الباركود داخل البطاقة */
 .bcbtn{width:38px;height:38px;border-radius:12px;flex-shrink:0;
   background:var(--brL);color:var(--br);font-size:13px;font-weight:900;
@@ -811,7 +820,8 @@ const Book = {
   ticket(r){
     const st = { pending:['w','قيد المراجعة','بانتظار موافقة العيادة'],
                  accepted:['g','مقبول','احضر في الموعد'],
-                 declined:['r','مرفوض','راجع العيادة لموعد آخر'] }[r.status]
+                 declined:['r','مرفوض','راجع العيادة لموعد آخر'],
+                 cancelled:['','ألغيته','أُبلغت العيادة'] }[r.status]
              || ['','—',''];
     const d = r.doc || {};
     return `<div class="tk">
@@ -819,7 +829,9 @@ const Book = {
         <div class="row">
           <span class="pill ${st[0]}">${st[1]}</span>
           <div class="gr"></div>
-          <span class="tiny mono">${esc((r.id||'').slice(0,6))}</span>
+          ${r.status === 'cancelled' ? ''
+            : `<button class="delx" title="حذف الحجز"
+                 onclick="Book.cancel('${r.id}','${r.status}','${esc(d.day||'')}')">✕</button>`}
         </div>
         <div class="when mt">${fmtD(d.day)}${d.time ? ' · ' + esc(d.time) : ''}</div>
         <div class="tiny">${esc(st[2])}</div>
@@ -844,6 +856,31 @@ const Book = {
           ⬇ تنزيل الباركود</button>
       </div>` : ''}
     </div>`;
+  },
+
+  /*──── إلغاء الحجز ────
+    ثلاث حالات يختلف أثرها على العيادة:
+    ١) لم يُقبل بعد → يختفي من قائمة السكرتير كأنه لم يكن.
+    ٢) قُبل وموعده لم يمضِ → تظهر جلسته «ألغى المراجع» بدل
+       زر الاستدعاء، فلا ينتظره أحد.
+    ٣) قُبل ومضى موعده → حذف عندي فقط؛ ما جرى في العيادة تاريخ
+       لا يُمحى بضغطة من الهاتف. */
+  async cancel(id, status, day){
+    const past = day && day < today();
+    const msg = status === 'pending'
+      ? 'حذف هذا الحجز؟ سيختفي من قائمة العيادة.'
+      : past
+        ? 'حذف هذا الحجز من قائمتك؟ سجلّ زيارتك في العيادة لا يتغيّر.'
+        : 'إلغاء هذا الموعد؟ ستُبلَّغ العيادة فوراً.';
+    if (!confirm(msg)) return;
+
+    try {
+      await Cloud.fresh();
+      await Cloud.call('/rest/v1/rpc/book_cancel',
+        { method:'POST', body:{ p_id:id } });
+      toast(past || status === 'pending' ? 'حُذف الحجز' : 'أُلغي الموعد وأُبلغت العيادة', 's');
+      this.mine();
+    } catch (e) { toast(String(e.message || e), 'e'); }
   },
 
   /* الباركود يُطوى داخل البطاقة نفسها — لا يفتح شاشة جديدة */
@@ -1269,16 +1306,26 @@ const Install = {
     });
     window.addEventListener('appinstalled', () => {
       this.prompt = null;
-      try { localStorage.setItem('pt_installed','1'); } catch(_){}
+      /* التثبيت يمحو الإرجاء: لو أُزيل التطبيق لاحقاً عاد الشريط */
+      try { localStorage.removeItem('pt_inst_x'); } catch(_){}
       this.hide(); toast('تم تثبيت التطبيق', 's');
     });
-    /* آيفون لا يطلق الحدث — يُعرض الإرشاد بعد لحظة */
-    if (this.isIOS() && !this.standalone() && !localStorage.getItem('pt_inst_x'))
-      setTimeout(() => this.bar(), 1400);
+    /* الشريط يظهر حتى لو لم يطلق المتصفح حدث التثبيت.
+       الحدث لا يُطلق على آيفون أصلاً، ولا يُطلق في كروم إن ظنّ
+       التطبيق مثبَّتاً — فبانتظاره وحده يختفي الشريط بلا سبب
+       ظاهر للمستخدم. */
+    setTimeout(() => this.bar(), this.isIOS() ? 1400 : 2200);
+  },
+
+  /* الإخفاء إرجاء لا إلغاء */
+  SNOOZE:7 * 86400000,
+  snoozed(){
+    const t = Number(localStorage.getItem('pt_inst_x') || 0);
+    return t && (Date.now() - t) < this.SNOOZE;
   },
 
   bar(){
-    if (this.standalone() || localStorage.getItem('pt_inst_x')) return;
+    if (this.standalone() || this.snoozed()) return;
     if (document.getElementById('instbar')) return;
     const d = document.createElement('div');
     d.id = 'instbar';
@@ -1288,7 +1335,8 @@ const Install = {
         <div class="nm">${APP.nameAr}</div>
         <div class="ds">${this.isIOS()
           ? 'من زر المشاركة ← أضف إلى الشاشة الرئيسية'
-          : 'ثبّته ليفتح كتطبيق ويصلك أسرع'}</div>
+          : this.prompt ? 'ثبّته ليفتح كتطبيق ويصلك أسرع'
+          : 'ثبّته من قائمة المتصفح ← تثبيت التطبيق'}</div>
       </div>
       ${this.isIOS() ? '' : '<button class="btn sm" id="inst-go">تثبيت</button>'}
       <button class="x" id="inst-x">✕</button>
@@ -1299,7 +1347,10 @@ const Install = {
   },
 
   hide(){ document.getElementById('instbar')?.remove(); },
-  dismiss(){ try { localStorage.setItem('pt_inst_x','1'); } catch(_){} this.hide(); },
+  dismiss(){
+    try { localStorage.setItem('pt_inst_x', String(Date.now())); } catch(_){}
+    this.hide();
+  },
 
   async go(){
     if (!this.prompt) return this.help();
