@@ -6,7 +6,7 @@
 <title>مواعيدي — حجز عيادة الأسنان</title>
 <meta name="theme-color" content="#00695C">
 <!-- الاتصال مقصور على سيرفر العيادة وحده -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; manifest-src blob:; worker-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; manifest-src blob:; worker-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,6 +160,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   transition:color .18s,background .18s}
 .tabs button.on{color:var(--br);background:var(--brL)}
 .tabs .ic{font-size:19px;line-height:1}
+
+/* منسدلات الجلسات */
+details.acc{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r);
+  margin-top:10px;overflow:hidden}
+details.acc>summary{padding:13px 14px;cursor:pointer;font-size:14.5px;
+  display:flex;align-items:center;gap:10px;list-style:none}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary .accic{width:34px;height:34px;border-radius:11px;display:grid;
+  place-items:center;background:var(--brL);flex-shrink:0}
+details.acc>summary .ar{color:var(--ink3);transition:transform .2s;flex-shrink:0}
+details.acc[open]>summary .ar{transform:rotate(-90deg)}
+details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top:12px}
 
 /* زر حذف الحجز — ناعم لا صارخ: الإلغاء تصرّف عادي لا خطر */
 .delx{width:30px;height:30px;border-radius:10px;flex-shrink:0;
@@ -341,7 +353,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 </div>
 
 <div class="tabs hide" id="tabs">
-  <button data-t="home"><span class="ic">🎫</span><span>مواعيدي</span></button>
+  <button data-t="care"><span class="ic">📅</span><span>مواعيدي</span></button>
+  <button data-t="home"><span class="ic">🎫</span><span>حجوزاتي</span></button>
   <button data-t="book"><span class="ic">＋</span><span>احجز</span></button>
   <button data-t="me"><span class="ic">👤</span><span>حسابي</span></button>
 </div>
@@ -767,7 +780,8 @@ const App = {
     $('#auth').classList.add('hide');
     $('#app').classList.remove('hide');
     $('#tabs').classList.remove('hide');
-    this.setTab('home');
+    /* الموعد القادم أهم ما يبحث عنه المراجع — فهو أول ما يراه */
+    this.setTab('care');
   },
 
   name(){
@@ -783,12 +797,14 @@ const App = {
   },
 
   draw(){
-    const titles = { home:['مواعيدي','حجوزاتك وحالتها'],
+    const titles = { care:['مواعيدي','مواعيدك القادمة وجلساتك'],
+                     home:['حجوزاتي','طلباتك وحالتها'],
                      book:['احجز موعد','اختر العيادة ثم الوقت'],
                      me:['حسابي','معلوماتك وكلمة المرور'] };
     const [a, b] = titles[S.tab];
     $('#pg-title').textContent = a;
     $('#pg-sub').textContent = b;
+    if (S.tab === 'care') return Care.draw();
     if (S.tab === 'home') return Book.mine();
     if (S.tab === 'book') return Book.clinics();
     return Me.draw();
@@ -1104,6 +1120,122 @@ const Book = {
     } catch (e) {
       show(String(e.message || e));
     } finally { b.disabled = false; b.textContent = 'تأكيد الحجز'; }
+  },
+};
+
+/*═══════════════ مواعيدي وجلساتي ═══════════════
+  الحجز طلب، والموعد التزام. خلطهما في شاشة واحدة يربك: المراجع
+  يبحث عن «متى دوري» فيجد طلبات قديمة مرفوضة.
+
+  فصار الحجز في «حجوزاتي»، والموعد المؤكَّد وسجلّ العلاج هنا.
+  والأسعار من سجل العيادة نفسه لا من تقدير — فلا يفاجأ بفارق.
+═════════════════════════════════════════════*/
+const Care = {
+  open:null,
+
+  async draw(){
+    const v = $('#view'); v.innerHTML = spin();
+    try {
+      await Cloud.fresh();
+      const d = await Cloud.call('/rest/v1/rpc/my_care', { method:'POST', body:{} });
+      const td = new Date().toISOString().slice(0,10);
+
+      const next = (d.appts || [])
+        .filter(a => a.day && a.day >= td)
+        .sort((a,b) => (a.day+(a.time||'')).localeCompare(b.day+(b.time||'')));
+
+      /* الأعمال تُنسب إلى زياراتها، فتُقرأ الجلسة كاملة */
+      const byVisit = {};
+      for (const w of (d.works || [])){
+        (byVisit[w.vid] = byVisit[w.vid] || []).push(w);
+      }
+      const visits = (d.visits || [])
+        .filter(x => x.date)
+        .sort((a,b) => String(b.date).localeCompare(String(a.date)));
+
+      const total = visits.reduce((t,x) =>
+        t + (byVisit[x.id]||[]).reduce((a,w)=> a + Number(w.price||0), 0), 0);
+
+      v.innerHTML = `
+        ${next.length ? next.map(a => `
+          <div class="card" style="border-color:var(--br)">
+            <div class="row">
+              <span class="pill g">موعدك القادم</span>
+              <div class="gr"></div>
+              <span class="tiny">${esc(a.clinic || '')}</span>
+            </div>
+            <div class="h1 mt" style="letter-spacing:-.01em">
+              ${fmtD(a.day)}${a.time ? ' · ' + esc(a.time) : ''}</div>
+            ${a.note ? `<div class="tiny mt">${esc(a.note)}</div>` : ''}
+            ${a.phone ? `<a class="btn gh w mt" href="tel:${esc(String(a.phone).replace(/[^\d+]/g,''))}">
+              اتصل بالعيادة</a>` : ''}
+          </div>`).join('')
+        : `<div class="card ctr" style="padding:26px 16px">
+             <div style="font-size:36px">📅</div>
+             <div class="h3 mt">ما عندك موعد قادم</div>
+             <div class="tiny mt">تُحدّده العيادة بعد زيارتك، ويظهر هنا.</div>
+           </div>`}
+
+        ${visits.length ? `
+          <div class="card">
+            <div class="row">
+              <div class="gr"><div class="lbl">جلساتي</div>
+                <div class="tiny">${visits.length} زيارة</div></div>
+              <div style="text-align:end">
+                <div class="tiny">مجموع ما سُجّل</div>
+                <div class="mono h3">${Number(total).toLocaleString('en-US')}</div>
+              </div>
+            </div>
+          </div>
+          ${visits.map((x,i) => this.session(x, byVisit[x.id] || [], i)).join('')}`
+        : ''}
+
+        <div style="height:14px"></div>`;
+    } catch (e) {
+      v.innerHTML = `<div class="pane card"><div class="al r">
+        ${esc(String(e.message || e))}</div>
+        <button class="btn gh w mt" onclick="Care.draw()">إعادة المحاولة</button></div>`;
+    }
+  },
+
+  /* كل زيارة منسدلة: عنوانها التاريخ، وداخلها ما عُمل وبكم */
+  session(v, works, i){
+    const sum = works.reduce((a,w)=> a + Number(w.price||0), 0);
+    const FDI = f => {
+      const n = Number(f); if (!n) return '';
+      const q = Math.floor(n/10), t = n%10;
+      const side = (q===1||q===4) ? 'يمين' : 'يسار';
+      const jaw  = (q===1||q===2) ? 'علوي' : 'سفلي';
+      return `${jaw} ${side} — ${t}`;
+    };
+    return `<details class="acc" ${i===0?'open':''}>
+      <summary>
+        <span class="accic">🦷</span>
+        <span class="gr">
+          <span style="font-weight:800">${fmtD(v.date)}</span>
+          <span class="tiny" style="display:block">${esc(v.clinic||'')}</span>
+        </span>
+        ${sum ? `<span class="pill">${Number(sum).toLocaleString('en-US')}</span>` : ''}
+        <span class="ar">‹</span>
+      </summary>
+      <div class="bd">
+        ${works.length ? `<div class="col">${works.map(w => `
+          <div class="it" style="cursor:default">
+            <div class="av">${esc(String(w.fdi||'—'))}</div>
+            <div class="gr">
+              <div class="h3 ell">${esc(w.proc || '—')}</div>
+              <div class="tiny">${esc(FDI(w.fdi))}${
+                (w.sessionNos||[]).length
+                  ? ' · جلسة ' + (w.sessionNos||[]).join('، ') : ''}</div>
+            </div>
+            ${Number(w.price) ? `<span class="mono" style="font-weight:800">
+              ${Number(w.price).toLocaleString('en-US')}</span>` : ''}
+          </div>`).join('')}</div>`
+          : `<div class="emp">لا تفاصيل مسجّلة لهذه الزيارة</div>`}
+        ${v.done ? `<div class="card flat mt"><div class="lbl">ملخّص الطبيب</div>
+          <div class="mt" style="font-weight:600;line-height:1.6">${esc(v.done)}</div></div>` : ''}
+      </div>
+    </details>`;
   },
 };
 
