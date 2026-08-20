@@ -190,7 +190,15 @@ details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top
 .bcbox{padding:0 16px 15px;animation:up .28s cubic-bezier(.2,.9,.3,1)}
 .bcpaper{background:#fff;border-radius:13px;padding:12px;border:1px solid var(--edge)}
 .bcnum{color:#000;text-align:center;font-family:monospace;font-weight:800;
-  font-size:21px;letter-spacing:.24em;margin-top:7px}
+  font-size:19px;letter-spacing:.24em;margin-top:5px}
+/* ترتيب الملصق: اسم الطبيب فوق، الباركود، ثم اسم المراجع ووقت حجزه */
+.bcdoc{color:#000;text-align:center;font-weight:900;font-size:14px;line-height:1.25;
+  border-bottom:1px solid #000;padding-bottom:5px;margin-bottom:8px}
+.bcpt{color:#000;text-align:center;font-weight:900;font-size:15px;margin-top:7px}
+.bcwhen{color:#000;text-align:center;font-weight:700;font-size:12px;margin-top:2px}
+
+/* سؤال مقفل: من قال إن صحته جيدة لا يختار حالة أخرى */
+.it.off{opacity:.42;filter:saturate(.35)}
 
 /* شريط التثبيت — نفس شكل برنامج العيادة */
 #instbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
@@ -522,6 +530,43 @@ const C39 = {
       style="width:100%;height:${h}px;background:#fff;display:block">${rects}</svg>`;
   },
 
+  /* بطاقة PNG للتنزيل: اسم الطبيب فوق، الباركود، ثم اسم المراجع
+     وتاريخ حجزه ووقته — نفس ما يراه على الشاشة ونفس ما يُطبع في
+     العيادة، فلا يختلف ملصق عن ملصق. */
+  card(o){
+    const { out, w } = this.bars(o.code);
+    const SC = 3, PAD = 22, BH = 96;
+    const c = document.createElement('canvas');
+    c.width  = Math.round(w * SC) + PAD * 2;
+    c.height = PAD + 44 + BH + 40 + 34 + 26 + PAD;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#000'; g.textAlign = 'center';
+    const mid = c.width / 2;
+
+    let y = PAD + 30;
+    g.font = 'bold 30px Zain, system-ui, sans-serif';
+    g.fillText(String(o.doctor || ''), mid, y, c.width - PAD * 2);
+    y += 14;
+    g.fillRect(PAD, y, c.width - PAD * 2, 2);
+
+    y += 16;
+    for (const [x, bw] of out) g.fillRect(PAD + x * SC, y, bw * SC, BH);
+    y += BH + 30;
+    g.font = 'bold 28px monospace';
+    g.fillText(String(o.code), mid, y);
+
+    y += 36;
+    g.font = 'bold 30px Zain, system-ui, sans-serif';
+    g.fillText(String(o.patient || ''), mid, y, c.width - PAD * 2);
+
+    y += 26;
+    g.font = '600 22px Zain, system-ui, sans-serif';
+    g.fillText(String(o.when || ''), mid, y, c.width - PAD * 2);
+
+    return c.toDataURL('image/png');
+  },
+
   /* صورة PNG للتنزيل: الصورة تبقى في الهاتف ولو أُغلق التطبيق */
   png(text, label){
     const { out, w } = this.bars(text);
@@ -541,7 +586,7 @@ const C39 = {
 };
 
 /*═══════════════ الحالة ═══════════════*/
-const S = { tab:'home', profile:null, clinic:null, clinics:null };
+const S = { tab:'home', profile:null, clinic:null, clinics:null, tickets:[] };
 
 /*═══════════════ الدخول ═══════════════*/
 const Auth = {
@@ -819,6 +864,8 @@ const Book = {
     try {
       await Cloud.fresh();
       const rows = await Cloud.call('/rest/v1/rpc/my_bookings', { method:'POST', body:{} });
+      /* البطاقات تبقى في متناول زر التنزيل بعد رسمها */
+      S.tickets = rows;
       if (!rows.length){
         v.innerHTML = `<div class="card ctr" style="padding:30px 18px">
           <div style="font-size:40px">🎫</div>
@@ -865,12 +912,15 @@ const Book = {
           title="الباركود">▮▮▮</button>` : ''}
       </div>
       ${r.code ? `<div class="bcbox hide" id="bc-${r.id}">
-        <div class="lbl ctr">رمز المراجع</div>
+        <div class="lbl ctr">اعرض هذا الباركود عند الاستقبال</div>
         <div class="bcpaper">
-          ${C39.svg(r.code, 66)}
+          <div class="bcdoc">${esc(r.doctor_name || r.clinic_name || '')}</div>
+          ${C39.svg(r.code, 62)}
           <div class="bcnum">${esc(r.code)}</div>
+          <div class="bcpt">${esc(App.name())}</div>
+          <div class="bcwhen">${fmtD(d.day)}${d.time ? ' · ' + esc(d.time) : ''}</div>
         </div>
-        <button class="btn gh w mt" onclick="Book.dl('${r.id}','${esc(r.code)}')">
+        <button class="btn gh w mt" onclick="Book.dl('${r.id}')">
           ⬇ تنزيل الباركود</button>
       </div>` : ''}
     </div>`;
@@ -922,11 +972,19 @@ const Book = {
       box.scrollIntoView({ behavior:'smooth', block:'nearest' });
   },
 
-  dl(id, code){
+  dl(id){
     try {
+      const r = (S.tickets || []).find(x => x.id === id);
+      if (!r || !r.code) return toast('تعذّر التنزيل', 'e');
+      const d = r.doc || {};
       const a = document.createElement('a');
-      a.href = C39.png(code, code);
-      a.download = `barcode-${code}.png`;
+      a.href = C39.card({
+        code:r.code,
+        doctor:r.doctor_name || r.clinic_name || '',
+        patient:App.name(),
+        when:`${fmtD(d.day)}${d.time ? ' · ' + d.time : ''}`,
+      });
+      a.download = `barcode-${r.code}.png`;
       a.click();
       toast('نُزّل الباركود', 's');
     } catch(_){ toast('تعذّر التنزيل', 'e'); }
@@ -1022,7 +1080,7 @@ const Book = {
             <div>
               <label class="it" style="cursor:pointer">
                 <input type="checkbox" value="${m.c}" data-d="${m.d?1:0}"
-                  onchange="Book.detail(this)"
+                  onchange="Book.pick(this)"
                   style="width:20px;height:20px;flex:0 0 auto">
                 <span class="gr" style="font-weight:700;font-size:14px">${esc(m.ar)}</span>
               </label>
@@ -1066,6 +1124,42 @@ const Book = {
     { c:'gyneco', ar:'هل لديك مشاكل نسائيه؟', d:1, f:1 },
   ],
 
+  /*──── «صحتي جيدة» جواب يلغي ما سواه ────
+    من صحته جيدة لا حالة عنده، فاختيارها يرفع بقية الأجوبة ويقفلها
+    مع تنبيه. ومن لم يخترها فهو حرّ يختار ما شاء. */
+  pick(box){
+    const list = $$('#b-mh input[type=checkbox]');
+    const good = list.find(i => i.value === 'health_good');
+    const mark = (i, off) => { i.disabled = off; i.closest('.it')?.classList.toggle('off', off); };
+
+    if (box.value === 'health_good'){
+      if (box.checked){
+        let cleared = 0;
+        list.forEach(i => {
+          if (i === box) return;
+          if (i.checked){
+            i.checked = false; cleared++;
+            const d = $('#d-' + i.value);
+            if (d){ d.classList.add('hide'); d.value = ''; }
+          }
+          mark(i, true);
+        });
+        toast(cleared ? 'صحتك جيدة — رُفعت بقية الخيارات'
+                      : 'صحة جيدة: لا تُختار معها حالة أخرى', 's');
+      } else {
+        list.forEach(i => { if (i !== box) mark(i, false); });
+      }
+      return;
+    }
+
+    if (good && good.checked){
+      box.checked = false;
+      toast('اخترت «صحتي جيدة» — لا يمكن اختيار حالة أخرى معها', 'e');
+      return;
+    }
+    this.detail(box);
+  },
+
   /* الإجابة بنعم تفتح حقل التفصيل — الطبيب يحتاج «أي دواء» لا «نعم» فقط */
   detail(box){
     const f = $('#d-' + box.value);
@@ -1087,11 +1181,13 @@ const Book = {
     if (day < today())  return show('اليوم المختار مضى — اختر يوماً قادماً');
     if (comp.length < 4) return show('اكتب سبب المراجعة');
 
-    /* القيمة نصّ التفصيل إن وُجد، وإلا ١ — نفس ما يتوقّعه برنامج العيادة */
+    /* الشكل الذي يقرأه برنامج العيادة حرفياً: {y:true, d:'التفصيل'}.
+       كان يُرسل ١ فقط، فتصل الإجابات ولا تظهر عند السكرتير ولا
+       يخرج منها أي تنبيه للطبيب. */
     const mh = {};
     $$('#b-mh input[type=checkbox]:checked').forEach(i => {
       const d = $('#d-' + i.value);
-      mh[i.value] = (d && d.value.trim()) ? d.value.trim() : 1;
+      mh[i.value] = { y:true, d:(d && d.value.trim()) ? d.value.trim() : '' };
     });
     if (!Object.keys(mh).length)
       return show('اختر حالة صحية واحدة على الأقل، أو «صحتي جيدة»');
@@ -1118,7 +1214,14 @@ const Book = {
       toast('أُرسل الحجز', 's');
       App.setTab('home');
     } catch (e) {
-      show(String(e.message || e));
+      const m = String(e.message || e);
+      /* حدود السيرفر تُقال بلغة المراجع لا برموزها */
+      show(/too_many_pending/.test(m)
+            ? 'عندك خمسة حجوزات تنتظر الردّ — انتظر ردّ العيادة أو ألغِ أحدها'
+          : /too_fast/.test(m)
+            ? 'حجوزات كثيرة خلال وقت قصير — انتظر قليلاً'
+          : /clinic_not_found/.test(m) ? 'هذه العيادة غير متاحة الآن'
+          : m);
     } finally { b.disabled = false; b.textContent = 'تأكيد الحجز'; }
   },
 };
