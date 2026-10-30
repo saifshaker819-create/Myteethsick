@@ -6,7 +6,7 @@
 <title>مواعيدي — حجز عيادة الأسنان</title>
 <meta name="theme-color" content="#00695C">
 <!-- الاتصال مقصور على سيرفر العيادة وحده -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; manifest-src blob:; worker-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: mediastream:; manifest-src blob:; worker-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -221,6 +221,31 @@ details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top
 .toast div.s{color:var(--ok)} .toast div.e{color:var(--bd)}
 @keyframes up{from{opacity:0;transform:translateY(14px)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── شريط العيادة وشاشة الباركود ── */
+.clbar{display:flex;align-items:center;gap:11px;padding:10px 12px;margin:2px 0 8px;
+  border-radius:16px;cursor:pointer;background:var(--glassS);border:1px solid var(--stroke);
+  box-shadow:var(--sh), 0 0 24px -14px var(--br2);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+.cllogo{width:42px;height:42px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;
+  font-size:20px;background:linear-gradient(140deg,var(--br2),var(--br));color:#fff;overflow:hidden}
+.cllogo.img,img.cllogo{background:#fff;border:1px solid var(--edge);object-fit:contain;padding:3px}
+.cllogo img{width:100%;height:100%;object-fit:contain}
+.scanhero{background:linear-gradient(180deg,var(--glassS),var(--glass));
+  box-shadow:var(--shL), 0 0 50px -26px var(--br2)}
+.scanic{width:70px;height:70px;margin:4px auto 0;border-radius:22px;display:grid;place-items:center;
+  font-size:22px;font-weight:900;letter-spacing:-2px;color:#fff;
+  background:linear-gradient(140deg,var(--br2),var(--br));box-shadow:0 14px 34px -14px var(--br)}
+.camwrap{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.camwrap video{width:100%;height:100%;object-fit:cover;display:block}
+.camaim{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.camaim .box{width:80%;height:34%;border:3px solid rgba(255,255,255,.95);border-radius:14px;
+  box-shadow:0 0 0 2000px rgba(0,0,0,.35)}
+.camaim .ln{position:absolute;width:80%;height:3px;background:var(--br2);
+  box-shadow:0 0 12px var(--br2);animation:sweep 1.9s ease-in-out infinite}
+@keyframes sweep{0%,100%{transform:translateY(-17%)}50%{transform:translateY(17%)}}
+.camst{position:absolute;inset-inline:0;bottom:0;padding:10px;text-align:center;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;font-size:13px;font-weight:700}
 </style>
 </head>
 <body>
@@ -349,6 +374,14 @@ details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top
 
   <!-- ═══ التطبيق ═══ -->
   <div id="app" class="hide">
+    <div class="clbar hide" id="clbar" onclick="Clinic.show()">
+      <div class="cllogo" id="cl-logo">🦷</div>
+      <div class="gr">
+        <div class="tiny">عيادتك</div>
+        <div class="h3 ell" id="cl-name"></div>
+      </div>
+      <span class="pill">تغيير</span>
+    </div>
     <div class="row" style="padding:6px 2px 0">
       <div class="gr">
         <div class="h2" id="pg-title"></div>
@@ -824,6 +857,11 @@ const App = {
     S.profile = me;
     $('#auth').classList.add('hide');
     $('#app').classList.remove('hide');
+    /* لا دليل عام للعيادات: المراجع يفتح عيادته بقراءة باركودها.
+       من قرأه سابقاً تُفتح له عيادته مباشرة، ومن لم يقرأ أيّ
+       باركود بعد تُعرض عليه شاشة القراءة قبل أي شيء آخر. */
+    $('#view').innerHTML = spin();
+    if (!(await Clinic.init())) return;
     $('#tabs').classList.remove('hide');
     /* الموعد القادم أهم ما يبحث عنه المراجع — فهو أول ما يراه */
     this.setTab('care');
@@ -835,6 +873,7 @@ const App = {
   },
 
   setTab(t){
+    Scan.stop();
     S.tab = t;
     $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
     window.scrollTo({ top:0 });
@@ -844,14 +883,14 @@ const App = {
   draw(){
     const titles = { care:['مواعيدي','مواعيدك القادمة وجلساتك'],
                      home:['حجوزاتي','طلباتك وحالتها'],
-                     book:['احجز موعد','اختر العيادة ثم الوقت'],
+                     book:['احجز موعد', S.clinic ? 'في ' + (S.clinic.app_name || S.clinic.name) : 'اقرأ باركود العيادة'],
                      me:['حسابي','معلوماتك وكلمة المرور'] };
     const [a, b] = titles[S.tab];
     $('#pg-title').textContent = a;
     $('#pg-sub').textContent = b;
     if (S.tab === 'care') return Care.draw();
     if (S.tab === 'home') return Book.mine();
-    if (S.tab === 'book') return Book.clinics();
+    if (S.tab === 'book') return S.clinic ? Book.form(S.clinic) : Clinic.show();
     return Me.draw();
   },
 };
@@ -996,47 +1035,9 @@ const Book = {
       <button class="btn gh w mt2" onclick="App.draw()">إعادة المحاولة</button></div>`;
   },
 
-  /*──── دليل العيادات ────*/
-  async clinics(){
-    const v = $('#view');
-    v.innerHTML = `<div class="card">
-        <label class="lb">ابحث عن عيادة</label>
-        <input id="cq" placeholder="اسم العيادة أو الطبيب أو المنطقة">
-      </div><div id="clist">${spin()}</div>`;
-    $('#cq').oninput = () => this.filter();
-    try {
-      await Cloud.fresh();
-      S.clinics = await Cloud.call(
-        '/rest/v1/clinics?select=id,name,doctor_name,area,gov,phone,kind' +
-        '&kind=eq.clinic&active=is.true&order=name');
-      this.filter();
-    } catch (e) { $('#clist').innerHTML = this.oops(e); }
-  },
-
-  filter(){
-    const q = ($('#cq')?.value || '').trim().toLowerCase();
-    const list = (S.clinics || []).filter(c => !q ||
-      [c.name, c.doctor_name, c.area, c.gov].some(x =>
-        String(x || '').toLowerCase().includes(q)));
-    $('#clist').innerHTML = list.length
-      ? `<div class="col mt">${list.map(c => `
-          <div class="it" onclick="Book.form('${c.id}')">
-            <div class="av">${esc((c.name || '?').charAt(0))}</div>
-            <div class="gr">
-              <div class="h3 ell">${esc(c.name)}</div>
-              <div class="tiny ell">${esc(c.doctor_name || '')}${
-                c.area ? ' · ' + esc(c.area) : ''}${c.gov ? ' · ' + esc(c.gov) : ''}</div>
-            </div>
-            <span style="color:var(--ink3)">‹</span>
-          </div>`).join('')}</div>`
-      : `<div class="emp">ما لكينا عيادة بهذا الاسم</div>`;
-  },
-
   /*──── نموذج الحجز ────*/
-  form(cid){
-    const c = (S.clinics || []).find(x => x.id === cid);
-    if (!c) return;
-    S.clinic = c;
+  form(c){
+    if (!c) return Clinic.show();
     const p = S.profile || {};
     const d = new Date(); d.setDate(d.getDate() + 1);
     const tomorrow = new Date(d - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
@@ -1044,12 +1045,13 @@ const Book = {
     $('#view').innerHTML = `
       <div class="card">
         <div class="row">
-          <div class="av">${esc((c.name || '?').charAt(0))}</div>
+          ${c.logo ? `<img class="cllogo img" src="${esc(c.logo)}" alt="">`
+                   : `<div class="av">${esc((c.name || '?').charAt(0))}</div>`}
           <div class="gr">
-            <div class="h3 ell">${esc(c.name)}</div>
+            <div class="h3 ell">${esc(c.app_name || c.name)}</div>
             <div class="tiny ell">${esc(c.doctor_name || '')}</div>
           </div>
-          <button class="btn gh sm" onclick="App.setTab('book')">تغيير</button>
+          <button class="btn gh sm" onclick="Clinic.show()">تغيير</button>
         </div>
       </div>
 
@@ -1221,8 +1223,227 @@ const Book = {
           : /too_fast/.test(m)
             ? 'حجوزات كثيرة خلال وقت قصير — انتظر قليلاً'
           : /clinic_not_found/.test(m) ? 'هذه العيادة غير متاحة الآن'
+          : /clinic_not_linked/.test(m) ? 'اقرأ باركود العيادة أولاً'
           : m);
     } finally { b.disabled = false; b.textContent = 'تأكيد الحجز'; }
+  },
+};
+
+/*═══════════════ العيادة: تُفتح بباركودها ═══════════════
+  لا قائمة بكل العيادات: المراجع يقرأ باركود عيادته — بالكاميرا أو
+  من صورة أو بكتابة الرمز — فيُربط بها على السيرفر، وتبقى في
+  «عياداتي» فلا يحتاج قراءتها مرة ثانية. السيرفر يرفض أي حجز في
+  عيادة لم يقرأ المراجع باركودها.
+═════════════════════════════════════════════════════════*/
+const Clinic = {
+  list:[], KEY:'pt_clinic',
+  RX:/K[0-9A-Z]{9}/,
+
+  async init(){
+    try {
+      await Cloud.fresh();
+      this.list = await Cloud.call('/rest/v1/rpc/my_clinics', { method:'POST', body:{} }) || [];
+    } catch (_){ this.list = []; }
+    const saved = localStorage.getItem(this.KEY);
+    const c = this.list.find(x => x.id === saved) || (this.list.length === 1 ? this.list[0] : null);
+    if (c){ this.use(c, true); return true; }
+    this.show();
+    return false;
+  },
+
+  use(c, quiet){
+    S.clinic = c;
+    try { localStorage.setItem(this.KEY, c.id); } catch(_){}
+    this.paint();
+    if (!quiet) toast('فُتحت ' + (c.app_name || c.name), 's');
+  },
+
+  /* هوية العيادة تظهر في رأس التطبيق — لكل عيادة اسمها وشعارها */
+  paint(){
+    const c = S.clinic, bar = $('#clbar');
+    if (!c || !bar){ bar?.classList.add('hide'); return; }
+    bar.classList.remove('hide');
+    $('#cl-name').textContent = c.app_name || c.name;
+    $('#cl-logo').innerHTML = c.logo ? `<img src="${esc(c.logo)}" alt="">` : '🦷';
+    $('#cl-logo').classList.toggle('img', !!c.logo);
+    document.title = (c.app_name || c.name) + ' — مواعيدي';
+  },
+
+  /*──── شاشة اختيار العيادة / قراءة الباركود ────*/
+  show(){
+    Scan.stop();
+    $('#pg-title').textContent = 'عيادتك';
+    $('#pg-sub').textContent = 'اقرأ باركود العيادة لتفتحها';
+    const has = this.list.length > 0;
+    $('#view').innerHTML = `
+      <div class="card scanhero">
+        <div class="ctr">
+          <div class="scanic">▮▮▮</div>
+          <div class="h2 mt">اقرأ باركود العيادة</div>
+          <div class="tiny mt">تجده عند الاستقبال أو على بطاقة العيادة.</div>
+        </div>
+        <div id="sc-cam" class="mt2"></div>
+        <div class="col mt2">
+          <button class="btn w" id="sc-go-cam" onclick="Scan.camera()">📷 القراءة بالكاميرا</button>
+          <label class="btn gh w" style="cursor:pointer">🖼 اختيار صورة الباركود
+            <input type="file" accept="image/*" class="hide" onchange="Scan.image(this)">
+          </label>
+        </div>
+        <div class="mt2">
+          <label class="lb">أو اكتب رمز العيادة</label>
+          <div class="row">
+            <input id="sc-code" dir="ltr" autocomplete="off" autocapitalize="characters"
+              spellcheck="false" placeholder="K·········" maxlength="14"
+              style="text-align:center;letter-spacing:.2em;font-weight:800;text-transform:uppercase">
+            <button class="btn" onclick="Clinic.link($('#sc-code').value)">فتح</button>
+          </div>
+        </div>
+        <div id="sc-err" class="al r hide"></div>
+      </div>
+
+      ${has ? `<div class="card">
+        <div class="lbl">عياداتي</div>
+        <div class="col mt">${this.list.map(c => `
+          <div class="it" onclick="Clinic.pick('${c.id}')">
+            ${c.logo ? `<img class="cllogo img" src="${esc(c.logo)}" alt="">`
+                     : `<div class="av">${esc((c.app_name || c.name || '?').charAt(0))}</div>`}
+            <div class="gr">
+              <div class="h3 ell">${esc(c.app_name || c.name)}</div>
+              <div class="tiny ell">${esc(c.doctor_name || '')}${c.area ? ' · ' + esc(c.area) : ''}</div>
+            </div>
+            ${S.clinic && S.clinic.id === c.id ? '<span class="pill g">الحالية</span>' : '<span style="color:var(--ink3)">‹</span>'}
+          </div>`).join('')}</div>
+      </div>` : ''}
+
+      ${S.clinic ? `<button class="btn gh w mt2" onclick="App.setTab(S.tab || 'care')">رجوع</button>` : ''}
+      <div style="height:12px"></div>`;
+    const inp = $('#sc-code');
+    inp.onkeydown = e => { if (e.key === 'Enter') this.link(inp.value); };
+  },
+
+  pick(id){
+    const c = this.list.find(x => x.id === id); if (!c) return;
+    this.use(c);
+    $('#tabs').classList.remove('hide');
+    App.setTab('book');
+  },
+
+  err(m){
+    const e = $('#sc-err');
+    if (e){ e.textContent = m; e.classList.remove('hide'); }
+    else toast(m, 'e');
+  },
+
+  /* الرمز يُرسل إلى السيرفر — هو وحده يعرف أيّ عيادة يخصّ */
+  async link(raw){
+    const up = String(raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    const m = up.match(this.RX);
+    if (!m) return this.err('الرمز غير صحيح — يبدأ بحرف K ويتكوّن من ١٠ خانات');
+    $('#sc-err')?.classList.add('hide');
+    try {
+      await Cloud.fresh();
+      const r = await Cloud.call('/rest/v1/rpc/patient_link_clinic',
+        { method:'POST', body:{ p_code:m[0] } });
+      if (!r || r.error){
+        return this.err(r?.error === 'too_many_tries'
+          ? 'محاولات كثيرة — انتظر ساعة ثم أعد المحاولة'
+          : 'لم نجد عيادة بهذا الباركود');
+      }
+      Scan.stop();
+      this.list = [r, ...this.list.filter(x => x.id !== r.id)];
+      this.use(r);
+      $('#tabs').classList.remove('hide');
+      App.setTab('book');
+    } catch (e) { this.err(String(e.message || e)); }
+  },
+};
+
+/*═══════════════ قراءة الباركود ═══════════════
+  BarcodeDetector مدمج في المتصفح — بلا مكتبات، فيبقى التطبيق ملفاً
+  واحداً. حيث لا يتوفّر (آيفون مثلاً) تبقى كتابة الرمز يدوياً.
+═════════════════════════════════════════════*/
+const Scan = {
+  stream:null, timer:null, det:null,
+
+  async detector(){
+    if (this.det) return this.det;
+    if (!('BarcodeDetector' in window)) return null;
+    try {
+      const have = await BarcodeDetector.getSupportedFormats();
+      const want = ['code_39','qr_code','code_128'].filter(f => have.includes(f));
+      this.det = new BarcodeDetector({ formats: want.length ? want : have });
+    } catch (_){ this.det = null; }
+    return this.det;
+  },
+
+  pickCode(list){
+    for (const c of list || []){
+      const v = String(c.rawValue || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+      const m = v.match(Clinic.RX);
+      if (m) return m[0];
+    }
+    return null;
+  },
+
+  async camera(){
+    const slot = $('#sc-cam'); if (!slot) return;
+    const det = await this.detector();
+    if (!det) return Clinic.err('متصفحك لا يقرأ الباركود بالكاميرا — اكتب الرمز بدلاً منها');
+    if (!navigator.mediaDevices?.getUserMedia)
+      return Clinic.err('الكاميرا تحتاج فتح التطبيق عبر رابط https');
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
+        audio:false });
+    } catch (e) {
+      return Clinic.err(e && e.name === 'NotAllowedError'
+        ? 'لم يُسمح باستخدام الكاميرا' : 'تعذّر تشغيل الكاميرا');
+    }
+    slot.innerHTML = `<div class="camwrap">
+        <video id="sc-v" playsinline muted autoplay></video>
+        <div class="camaim"><div class="box"></div><div class="ln"></div></div>
+        <div class="camst" id="sc-st">وجّه الكاميرا نحو الباركود</div>
+      </div>
+      <button class="btn gh w mt" onclick="Scan.stop()">إيقاف الكاميرا</button>`;
+    $('#sc-go-cam')?.classList.add('hide');
+    const v = $('#sc-v');
+    v.srcObject = this.stream;
+    try { await v.play(); } catch(_){}
+    const tick = async () => {
+      if (!this.stream || !$('#sc-v')) return;
+      try {
+        const code = this.pickCode(await det.detect(v));
+        if (code){
+          if (navigator.vibrate) try { navigator.vibrate(60); } catch(_){}
+          const st = $('#sc-st'); if (st) st.textContent = code;
+          this.stop();
+          return Clinic.link(code);
+        }
+      } catch(_){}
+      this.timer = setTimeout(tick, 220);
+    };
+    tick();
+  },
+
+  async image(inp){
+    const f = inp.files && inp.files[0]; if (!f) return;
+    inp.value = '';
+    const det = await this.detector();
+    if (!det) return Clinic.err('متصفحك لا يقرأ الباركود من الصور — اكتب الرمز الظاهر تحت الخطوط');
+    try {
+      const bmp = await createImageBitmap(f);
+      const code = this.pickCode(await det.detect(bmp));
+      bmp.close && bmp.close();
+      if (!code) return Clinic.err('لم نجد باركود العيادة في الصورة — جرّب صورة أوضح');
+      Clinic.link(code);
+    } catch (_){ Clinic.err('تعذّر قراءة الصورة'); }
+  },
+
+  stop(){
+    clearTimeout(this.timer); this.timer = null;
+    if (this.stream){ this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+    const slot = $('#sc-cam'); if (slot) slot.innerHTML = '';
+    $('#sc-go-cam')?.classList.remove('hide');
   },
 };
 
@@ -1445,7 +1666,8 @@ const Me = {
   async out(){
     if (!confirm('خروج من الحساب؟')) return;
     await Cloud.signOut();
-    S.profile = null;
+    S.profile = null; S.clinic = null; Clinic.list = []; Scan.stop();
+    $('#clbar')?.classList.add('hide');
     $('#app').classList.add('hide');
     $('#tabs').classList.add('hide');
     $('#auth').classList.remove('hide');
