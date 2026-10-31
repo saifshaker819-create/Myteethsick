@@ -462,7 +462,7 @@ const Cloud = {
     let r;
     try { r = await fetch(this.cfg.url + path,
       { method, headers:h, body: body ? JSON.stringify(body) : undefined }); }
-    catch(_){ throw new Error('تعذّر الوصول إلى السيرفر — تحقّق من الإنترنت'); }
+    catch(_){ const e = new Error('تعذّر الوصول إلى السيرفر — تحقّق من الإنترنت'); e.net = true; throw e; }
 
     const txt = await r.text();
     let data = null;
@@ -510,7 +510,11 @@ const Cloud = {
                       exp: Date.now() + Number(d.expires_in||3600)*1000,
                       email:this.session.email });
       return true;
-    } catch(_){ this.saveSess(null); return false; }
+    } catch(e){
+      /* انقطاع الشبكة لا يُخرج المراجع: الجلسة تبقى ويُعاد التجديد لاحقاً */
+      if (!e?.net) this.saveSess(null);
+      return false;
+    }
   },
 
   /* التذكرة قصيرة العمر — تُجدَّد قبل أي نداء يقترب انتهاؤها */
@@ -1236,14 +1240,49 @@ const Book = {
   عيادة لم يقرأ المراجع باركودها.
 ═════════════════════════════════════════════════════════*/
 const Clinic = {
-  list:[], KEY:'pt_clinic',
+  list:[], KEY:'pt_clinic', PEND:'pt_pending',
   RX:/K[0-9A-Z]{9}/,
+
+  /* رمز العيادة من نص الباركود: الرابط الجديد (?c=K…) أو الرمز وحده.
+     الرابط يُقرأ أولاً — لأن حروف الرابط نفسه قد تُشبه رمزاً. */
+  codeOf(raw){
+    const t = String(raw || '').trim();
+    try {
+      const u = new URL(t);
+      const c = (u.searchParams.get('c') || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+      if (/^K[0-9A-Z]{9}$/.test(c)) return c;
+      return null;
+    } catch(_){}
+    const m = t.toUpperCase().replace(/[^0-9A-Z]/g, '').match(this.RX);
+    return m ? m[0] : null;
+  },
+  /* فُتح التطبيق من باركود العيادة: يُحفظ الرمز حتى يكتمل التسجيل والدخول */
+  catchLink(){
+    const c = this.codeOf(location.href);
+    if (!c) return;
+    try { localStorage.setItem(this.PEND, c); } catch(_){}
+    try { history.replaceState(null, '', location.pathname); } catch(_){}
+  },
+  pending(){ try { return localStorage.getItem(this.PEND) || ''; } catch(_){ return ''; } },
+  clearPending(){ try { localStorage.removeItem(this.PEND); } catch(_){} },
 
   async init(){
     try {
       await Cloud.fresh();
       this.list = await Cloud.call('/rest/v1/rpc/my_clinics', { method:'POST', body:{} }) || [];
     } catch (_){ this.list = []; }
+    /* جاء من باركود العيادة: تُفتح تلك العيادة مباشرة بعد الدخول */
+    const pend = this.pending();
+    if (pend){
+      this.clearPending();
+      const have = this.list.find(x => x.code === pend);
+      if (have){ this.use(have); return true; }
+      const r = await this.attach(pend);
+      if (r) return true;
+      this.show();
+      this.err(this._lastErr || 'لم نجد عيادة بهذا الباركود');
+      return false;
+    }
     const saved = localStorage.getItem(this.KEY);
     const c = this.list.find(x => x.id === saved) || (this.list.length === 1 ? this.list[0] : null);
     if (c){ this.use(c, true); return true; }
@@ -1337,26 +1376,34 @@ const Clinic = {
   },
 
   /* الرمز يُرسل إلى السيرفر — هو وحده يعرف أيّ عيادة يخصّ */
-  async link(raw){
-    const up = String(raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
-    const m = up.match(this.RX);
-    if (!m) return this.err('الرمز غير صحيح — يبدأ بحرف K ويتكوّن من ١٠ خانات');
-    $('#sc-err')?.classList.add('hide');
+  /* ربط حسابي بعيادة برمزها — يُرجع العيادة أو null مع سبب الفشل */
+  async attach(code){
+    this._lastErr = '';
     try {
       await Cloud.fresh();
       const r = await Cloud.call('/rest/v1/rpc/patient_link_clinic',
-        { method:'POST', body:{ p_code:m[0] } });
+        { method:'POST', body:{ p_code:code } });
       if (!r || r.error){
-        return this.err(r?.error === 'too_many_tries'
+        this._lastErr = r?.error === 'too_many_tries'
           ? 'محاولات كثيرة — انتظر ساعة ثم أعد المحاولة'
-          : 'لم نجد عيادة بهذا الباركود');
+          : 'لم نجد عيادة بهذا الباركود';
+        return null;
       }
-      Scan.stop();
       this.list = [r, ...this.list.filter(x => x.id !== r.id)];
       this.use(r);
-      $('#tabs').classList.remove('hide');
-      App.setTab('book');
-    } catch (e) { this.err(String(e.message || e)); }
+      return r;
+    } catch (e) { this._lastErr = String(e.message || e); return null; }
+  },
+
+  async link(raw){
+    const code = this.codeOf(raw);
+    if (!code) return this.err('الرمز غير صحيح — يبدأ بحرف K ويتكوّن من ١٠ خانات');
+    $('#sc-err')?.classList.add('hide');
+    const r = await this.attach(code);
+    if (!r) return this.err(this._lastErr);
+    Scan.stop();
+    $('#tabs').classList.remove('hide');
+    App.setTab('book');
   },
 };
 
@@ -1380,9 +1427,8 @@ const Scan = {
 
   pickCode(list){
     for (const c of list || []){
-      const v = String(c.rawValue || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
-      const m = v.match(Clinic.RX);
-      if (m) return m[0];
+      const code = Clinic.codeOf(c.rawValue);
+      if (code) return code;
     }
     return null;
   },
@@ -1857,7 +1903,53 @@ const Install = {
 window.installApp = () => Install.go();
 
 /*═══════════════ الإقلاع ═══════════════*/
+/*═══ الاستئناف ═══
+  الجلسة المحفوظة تُستعمل في كل فتح للتطبيق. انقطاع النت لا يُخرج
+  المراجع: تظهر شاشة «لا اتصال» ويُعاد الاتصال تلقائياً. الجلسة
+  تُمحى فقط إن رفضها السيرفر صراحةً. */
+const Resume = {
+  _t:null, n:0,
+  async go(){
+    clearTimeout(this._t);
+    try {
+      await Cloud.fresh();
+      if (!Cloud.session) return this.login();
+      const me = await Cloud.whoami();
+      if (me && me.role === 'patient'){ this.n = 0; return App.enter(me); }
+      this.login();
+    } catch(e){
+      if (e?.net && Cloud.session) return this.offline();
+      Cloud.saveSess(null); this.login();
+    }
+  },
+  login(){
+    $('#app').classList.add('hide'); $('#auth').classList.remove('hide');
+    if (Clinic.pending()) this.hint();
+  },
+  offline(){
+    $('#auth').classList.add('hide'); $('#app').classList.remove('hide');
+    $('#tabs').classList.add('hide');
+    $('#view').innerHTML = `<div class="card ctr" style="margin-top:30px">
+      <div style="font-size:40px">📡</div>
+      <div class="h2 mt">لا يوجد اتصال بالإنترنت</div>
+      <div class="tiny mt">حسابك محفوظ — سيُفتح تلقائياً حين يعود الاتصال</div>
+      <button class="btn w mt2" onclick="Resume.go()">إعادة المحاولة</button></div>`;
+    const wait = Math.min(30000, 3000 * Math.pow(2, Math.min(this.n++, 4)));
+    this._t = setTimeout(() => this.go(), wait);
+  },
+  /* فُتح من باركود عيادة قبل الدخول: يُقال له إنها ستُفتح بعده */
+  hint(){
+    const c = Clinic.pending(); if (!c || $('#pend-hint')) return;
+    $('#auth').insertAdjacentHTML('afterbegin', `<div id="pend-hint" class="al g" style="margin:14px 0 0">
+      <span>🦷</span><span>سجّل حساباً أو ادخل، وتُفتح لك العيادة تلقائياً<br>
+      <span class="tiny">رمز العيادة: <bdi>${esc(c)}</bdi></span></span></div>`);
+  },
+};
+window.addEventListener('online', () => { if (Cloud.session && !$('#app').classList.contains('hide') && !S.profile) Resume.go(); });
+
 (function boot(){
+  /* فُتح من باركود عيادة (رابط ?c=K…): يُحفظ الرمز لما بعد الدخول */
+  Clinic.catchLink();
   /* المظهر يتبع الجهاز ما لم يختر المراجع غيره */
   const saved = localStorage.getItem('pt_theme');
   const dark = saved ? saved === 'dark'
@@ -1897,15 +1989,8 @@ window.installApp = () => Install.go();
   else Auth.show('in');
 
   /* جلسة محفوظة: يُفتح التطبيق مباشرة بلا إعادة دخول */
-  if (Cloud.session && Cloud.ready()){
-    (async () => {
-      try {
-        await Cloud.fresh();
-        const me = await Cloud.whoami();
-        if (me && me.role === 'patient') App.enter(me);
-      } catch(_){ Cloud.saveSess(null); }
-    })();
-  }
+  if (Cloud.session && Cloud.ready()) Resume.go();
+  else if (Clinic.pending()) Resume.hint();
 })();
 </script>
 </body>
