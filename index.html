@@ -6,8 +6,15 @@
 <title>مواعيدي — حجز عيادة الأسنان</title>
 <meta name="theme-color" content="#00695C">
 <!-- الاتصال مقصور على سيرفر العيادة وحده -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; manifest-src blob:; worker-src 'self'; connect-src https://*.googleapis.com; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; manifest-src 'self' blob:; worker-src 'self'; connect-src https://*.googleapis.com; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
+<!-- منيفست وأيقونات ثابتة: أندرويد يبني منها تطبيقاً حقيقياً يتحدّث وحده -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مواعيدي">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
@@ -199,6 +206,19 @@ details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top
 
 /* سؤال مقفل: من قال إن صحته جيدة لا يختار حالة أخرى */
 .it.off{opacity:.42;filter:saturate(.35)}
+
+/* شريط الإشعارات — بشكل شريط التثبيت، وفوقه إن ظهرا معاً */
+#pushbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
+  z-index:51;padding:0 12px;display:flex;justify-content:center}
+body:has(#instbar) #pushbar{bottom:calc(142px + env(safe-area-inset-bottom))}
+#pushbar .box{display:flex;align-items:center;gap:11px;width:100%;max-width:536px;
+  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--stroke);border-radius:16px;padding:10px 12px;box-shadow:var(--shL);
+  animation:up .35s cubic-bezier(.2,.9,.3,1)}
+#pushbar .pb-ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:19px;background:var(--glass2)}
+#pushbar .nm{font-weight:900;font-size:14.5px}
+#pushbar .ds{font-size:11.5px;color:var(--ink2);font-weight:600;line-height:1.4}
+#pushbar .x{width:28px;height:28px;border-radius:9px;color:var(--ink3);flex-shrink:0;font-size:14px;background:var(--glass2)}
 
 /* شريط التثبيت — نفس شكل برنامج العيادة */
 #instbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
@@ -710,6 +730,8 @@ const Cloud = {
   },
 
   async signOut(){
+    /* اشتراك الإشعارات على هذا الجهاز يُحذف ما دامت الجلسة قائمة */
+    try { Push.bar(false); await Push.off(); } catch(_){}
     try { await FBSDK.signOut(FBC.auth); } catch(_){}
     this.me = null;
   },
@@ -1123,6 +1145,7 @@ const App = {
     $('#tabs').classList.remove('hide');
     /* الموعد القادم أهم ما يبحث عنه المراجع — فهو أول ما يراه */
     this.setTab('care');
+    try { Push.start(); } catch(_){}
   },
 
   name(){
@@ -1910,6 +1933,8 @@ const Me = {
         <button class="btn gh w mt2" id="m-pgo" onclick="Me.pass()">تغيير كلمة المرور</button>
       </div>
 
+      ${Push.meCard()}
+
       <button class="btn gh w mt2" onclick="Me.out()">خروج</button>
       <div style="height:12px"></div>`;
   },
@@ -2013,10 +2038,183 @@ const ICON = {
   },
 };
 
+/*═══════════════ الإشعارات ═══════════════
+  تصل حتى والتطبيق مغلق: قبول حجزك أو الاعتذار عنه، وموعد جديد تحدّده
+  لك العيادة أو تغيير يومه وساعته. يرسلها سيرفر Firebase (Cloud Functions).
+
+  اشتراك هذا الجهاز يُحفظ في pushsubs/{uid}/d/{sid} — صاحبه وحده يكتبه
+  ويقرؤه. والمفتاح العام لمرسل الإشعارات في meta/push.
+  · آيفون: تعمل فقط للتطبيق المضاف إلى الشاشة الرئيسية.
+═══════════════════════════════════════════*/
+const Push = {
+  LS:'pt_push', SNOOZE:3 * 86400000,
+
+  can(){
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+      && (location.protocol === 'https:' || ['localhost','127.0.0.1'].includes(location.hostname));
+  },
+  iosBlocked(){ return Install.isIOS() && !Install.standalone(); },
+  forMe(){ return !!(Cloud.uid() && S.profile); },
+  perm(){ try { return Notification.permission; } catch(_){ return 'denied'; } },
+
+  local(){ try { return JSON.parse(localStorage.getItem(this.LS)) || {}; } catch(_){ return {}; } },
+  saveLocal(o){ try { localStorage.setItem(this.LS, JSON.stringify(o)); } catch(_){} },
+
+  b64u(s){
+    const p = '='.repeat((4 - s.length % 4) % 4);
+    const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, c => c.charCodeAt(0));
+  },
+  same(buf, key){
+    if (!buf) return false;
+    const a = new Uint8Array(buf), b = this.b64u(key);
+    return a.length === b.length && a.every((x, i) => x === b[i]);
+  },
+  async sid(endpoint){
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
+    return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 40);
+  },
+  async pubKey(){
+    try {
+      const s = await FBSDK.getDoc(FBC.d('meta', 'push'));
+      const k = s.exists() ? s.data().publicKey : null;
+      if (k){ const o = this.local(); if (o.k !== k){ o.k = k; this.saveLocal(o); } }
+      return k || null;
+    } catch(_){ return this.local().k || null; }
+  },
+  async reg(){
+    return Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 8000))]);
+  },
+
+  _busy:false,
+  async sync(force){
+    if (this._busy || !this.can() || !this.forMe() || this.perm() !== 'granted' || this.iosBlocked()) return false;
+    const me = Cloud.uid(); if (!me || !navigator.onLine) return false;
+    this._busy = true;
+    try {
+      const key = await this.pubKey(); if (!key) return false;
+      const reg = await this.reg(); if (!reg) return false;
+      let sub = await reg.pushManager.getSubscription();
+      const o = this.local();
+      /* مفتاح تغيّر، أو اشتراك تركه حساب آخر على هذا الجهاز: اشتراك جديد */
+      if (sub && (!this.same(sub.options?.applicationServerKey, key) || (o.uid && o.uid !== me))){
+        try { await sub.unsubscribe(); } catch(_){}
+        sub = null;
+      }
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:this.b64u(key) });
+      const j = sub.toJSON();
+      if (!j.endpoint || !j.keys?.p256dh || !j.keys?.auth) return false;
+      const sid = await this.sid(j.endpoint);
+      if (!force && o.uid === me && o.sid === sid && Date.now() - (o.t || 0) < 7 * 86400000) return true;
+      await FBSDK.setDoc(FBC.d('pushsubs', me, 'd', sid), {
+        endpoint:j.endpoint, keys:{ p256dh:j.keys.p256dh, auth:j.keys.auth },
+        role:'patient', cid:'', ua:navigator.userAgent.slice(0, 180), lang:'ar',
+        at:FBSDK.serverTimestamp() });
+      this.saveLocal({ ...this.local(), uid:me, sid, t:Date.now() });
+      this.bar(false);
+      return true;
+    } catch(_){ return false; }
+    finally { this._busy = false; }
+  },
+
+  /* الموافقة تُطلب من ضغطة المستخدم نفسه (آيفون يشترطه) */
+  async enable(){
+    if (!this.can()) return toast('هذا المتصفح لا يدعم الإشعارات', 'e');
+    if (this.iosBlocked()) return toast('على آيفون: أضف التطبيق إلى الشاشة الرئيسية أولاً ثم افتحه منها', 'e');
+    let p = this.perm();
+    if (p === 'default'){ try { p = await Notification.requestPermission(); } catch(_){ p = this.perm(); } }
+    if (p !== 'granted'){
+      this.bar(false);
+      toast('الإشعارات محظورة — اسمح بها من إعدادات المتصفح لهذا الموقع', 'e');
+      return this.paintMe();
+    }
+    const ok = await this.sync(true);
+    toast(ok ? 'تم تفعيل الإشعارات ✓' : 'تمت الموافقة، وستُفعَّل تلقائياً حين يجهز السيرفر', ok ? 's' : 'e');
+    this.paintMe();
+  },
+
+  /* الخروج: يُحذف اشتراك هذا الجهاز قبل إنهاء الجلسة */
+  async off(){
+    const o = this.local(), me = Cloud.uid();
+    if (o.sid && me && o.uid === me){
+      try { await Promise.race([FBSDK.deleteDoc(FBC.d('pushsubs', me, 'd', o.sid)),
+                                new Promise(r => setTimeout(r, 4000))]); } catch(_){}
+    }
+    this.saveLocal({ k:o.k, uid:o.uid });
+  },
+
+  snoozed(){ return Date.now() - (this.local().x || 0) < this.SNOOZE; },
+  later(){ this.saveLocal({ ...this.local(), x:Date.now() }); this.bar(false); },
+  bar(show){
+    const old = document.getElementById('pushbar');
+    if (show === false){ old?.remove(); return; }
+    if (old || !this.can() || !this.forMe() || this.iosBlocked() || this.perm() !== 'default' || this.snoozed()) return;
+    const d = document.createElement('div');
+    d.id = 'pushbar';
+    d.innerHTML = `<div class="box">
+      <div class="pb-ic">🔔</div>
+      <div class="gr" style="min-width:0">
+        <div class="nm">فعّل الإشعارات</div>
+        <div class="ds">يصلك قبول حجزك وموعدك حتى والتطبيق مغلق</div>
+      </div>
+      <button class="btn sm" id="push-go">تفعيل</button>
+      <button class="x" id="push-x">✕</button>
+    </div>`;
+    document.body.appendChild(d);
+    d.querySelector('#push-go').onclick = () => this.enable();
+    d.querySelector('#push-x').onclick = () => this.later();
+  },
+
+  /* بطاقة في «حسابي» */
+  meCard(){ return `<div class="card" id="push-me">${this.meInner()}</div>`; },
+  meInner(){
+    const p = this.can() ? this.perm() : 'na';
+    const st = !this.can() ? 'هذا المتصفح لا يدعم الإشعارات'
+      : this.iosBlocked() ? 'على آيفون تعمل فقط للتطبيق المضاف إلى الشاشة الرئيسية'
+      : p === 'granted' ? 'مفعّلة على هذا الجهاز ✓'
+      : p === 'denied' ? 'محظورة — اسمح بها من إعدادات المتصفح لهذا الموقع'
+      : 'غير مفعّلة';
+    return `<div class="lbl">🔔 الإشعارات</div>
+      <div class="tiny mt">تصلك حتى والتطبيق مغلق: قبول حجزك أو الاعتذار عنه، وموعد جديد أو تغيير موعدك.</div>
+      <div class="al ${p === 'granted' ? 'g' : p === 'denied' ? 'r' : 'w'} mt">${st}</div>
+      ${this.can() && !this.iosBlocked() && p === 'default'
+        ? `<button class="btn w mt" onclick="Push.enable()">تفعيل الإشعارات</button>` : ''}`;
+  },
+  paintMe(){ const b = document.getElementById('push-me'); if (b) b.innerHTML = this.meInner(); },
+
+  route(url){
+    let go = '';
+    try { go = new URL(url || location.href, location.href).searchParams.get('go') || ''; } catch(_){}
+    if (['care','home','book','me'].includes(go) && S.profile && !$('#app').classList.contains('hide')) App.setTab(go);
+  },
+
+  init(){
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.addEventListener('message', e => {
+      const m = e.data || {};
+      if (m.type === 'push-open') this.route(m.url);
+      if (m.type === 'push-renew') this.sync(true);
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) this.sync(); });
+  },
+
+  start(){
+    setTimeout(() => {
+      this.sync().then(ok => { if (!ok) this.bar(); });
+      this.route(location.href);
+      try { if (/[?&]go=/.test(location.search)) history.replaceState(null, '', location.pathname); } catch(_){}
+    }, 1500);
+  },
+};
+
 const Install = {
   prompt:null,
 
+  /* المنيفست الثابت manifest.webmanifest يكفي (مربوط في <head>): منه يبني
+     أندرويد تطبيقاً حقيقياً يتحدّث وحده. المولَّد كـ blob كان يُثبَّت اختصاراً
+     بشارة كروم لا يتحدّث أبداً. يُبقى البديل فقط إن غاب الربط لسبب ما. */
   async manifest(){
+    if (document.querySelector('link[rel=manifest][href="manifest.webmanifest"]')) return;
     const [i192, i512, m512] = await Promise.all([
       ICON.png(192,false), ICON.png(512,false), ICON.png(512,true),
     ]);
@@ -2235,6 +2433,7 @@ window.addEventListener('online', () => { if (Cloud.session && !$('#app').classL
   $$('#tabs button').forEach(b => b.onclick = () => App.setTab(b.dataset.t));
 
   Install.init();
+  Push.init();
   try { localStorage.removeItem('pt_wait'); localStorage.removeItem('pt_sess'); } catch(_){}
   Auth.show('in');
 
