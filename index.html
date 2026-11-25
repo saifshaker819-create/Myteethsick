@@ -17,58 +17,95 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@700;800&display=swap" rel="stylesheet">
 <style>
-/* ── نفس لغة برنامج العيادة البصرية: المراجع يفتح تطبيقاً يعرف
-   أنه تطبيق عيادته، لا برنامجاً غريباً. لكنه أهدأ بكثير — يُفتح
-   مرات قليلة في السنة، لا طوال الدوام. ── */
+/*═══════════════════════════════════════════════════════════════════
+  مواعيدي — نفس لغة «أسناني» البصرية (خزف وحبر)
+  ───────────────────────────────────────────────────────────────────
+  · خلفية ورق المخطّطات: شبكة ناعمة وضوء فيروزي وذهبي خافت في الزوايا.
+  · أسطح خزفية بظلال طبقية قصيرة وحافة مضيئة، وأزرار متدرّجة.
+  · تفاعل هادئ: البطاقات تنساب عند الظهور، ونبضة تحت الإصبع،
+    وشريط سفلي عائم بمؤشّر ينزلق بين الأقسام.
+  أسماء المتغيّرات القديمة (--glass, --stroke, --edge …) باقية لأن
+  الشيفرة تستعملها مباشرة؛ تغيّرت قيمها فقط.
+═══════════════════════════════════════════════════════════════════*/
 :root{
-  --bg:#E8EFF1;
-  --blob1:#7FD8CB; --blob2:#9CC8F0; --blob3:#F2D3B8;
-  --glass:rgba(255,255,255,.62);
-  --glass2:rgba(255,255,255,.44);
-  --glassS:rgba(255,255,255,.78);
-  --stroke:rgba(255,255,255,.75);
-  --edge:rgba(10,50,58,.10);
-  --ink:#06232B; --ink2:#31555F; --ink3:#5D7F89;
-  --br:#00736A; --br2:#00A594; --brL:rgba(0,115,106,.13);
+  --fd:'Readex Pro','IBM Plex Sans Arabic','Zain',system-ui,sans-serif;
+  --fb:'IBM Plex Sans Arabic','Readex Pro','Zain',system-ui,sans-serif;
+
+  --bg:#EEEBE4;
+  --surface:#FFFFFF; --surface2:#F7F5F0;
+  --line:#E3DED3; --line2:#D2CBBD;
+  --grid:rgba(15,30,36,.05);
+
+  --ink:#0F1E24; --ink2:#3B4B54; --ink3:#66757E;
+
+  --br:#0C7A6E; --br2:#12A08F; --brD:#085A51; --brL:rgba(12,122,110,.10);
   --on-br:#FFFFFF;
-  --ok:#12784A; --okL:rgba(18,120,74,.14);
-  --wr:#9A6400; --wrL:rgba(154,100,0,.15);
-  --bd:#B23A2C; --bdL:rgba(178,58,44,.14);
-  --sh:0 1px 1px rgba(6,35,43,.04), 0 8px 24px -14px rgba(6,35,43,.30);
-  --shL:0 2px 6px rgba(6,35,43,.06), 0 24px 50px -26px rgba(6,35,43,.45);
-  --r:18px; --blur:blur(18px) saturate(150%);
+  --gold:#B7832A; --goldL:rgba(183,131,42,.13); --gold2:#E2B862;
+  --frame:#0B1B1F; --frame2:#10262B;
+
+  --ok:#14794A; --okL:rgba(20,121,74,.11);
+  --wr:#9A5F00; --wrL:rgba(154,95,0,.12);
+  --bd:#B4352A; --bdL:rgba(180,53,42,.10);
+
+  --sh:0 1px 1px rgba(15,30,36,.04), 0 2px 6px -2px rgba(15,30,36,.08), 0 10px 24px -14px rgba(15,30,36,.14);
+  --shL:0 2px 4px rgba(15,30,36,.05), 0 18px 40px -16px rgba(15,30,36,.26);
+  --hi:inset 0 1px 0 rgba(255,255,255,.9);
+  --r:20px;
+  --neon:color-mix(in srgb,var(--br) 55%,#3CF2D8);
+
+  /* أسماء قديمة تستعملها الشيفرة */
+  --glass:var(--surface); --glass2:var(--surface2); --glassS:var(--surface);
+  --stroke:var(--line); --edge:var(--line);
+  --blur:none;
 }
+html{color-scheme:light}
 html[data-theme=dark]{
-  --bg:#050D10;
-  --blob1:#065A55; --blob2:#0A3352; --blob3:#3A2418;
-  --glass:rgba(20,38,42,.62); --glass2:rgba(20,38,42,.42);
-  --glassS:rgba(24,44,49,.86);
-  --stroke:rgba(255,255,255,.10); --edge:rgba(255,255,255,.07);
-  --ink:#E9F5F3; --ink2:#A8C6C2; --ink3:#7C9C98;
-  --br:#12C9AE; --br2:#3FE8CE; --brL:rgba(18,201,174,.16); --on-br:#03211D;
-  --ok:#2FD08A; --okL:rgba(47,208,138,.16);
-  --wr:#E0A93A; --wrL:rgba(224,169,58,.16);
-  --bd:#FF7A66; --bdL:rgba(255,122,102,.16);
+  color-scheme:dark;
+  --bg:#0A1114;
+  --surface:#111A1E; --surface2:#152126;
+  --line:#1F2D33; --line2:#2C3D44;
+  --grid:rgba(255,255,255,.03);
+
+  --ink:#EEF3F2; --ink2:#B4C2C2; --ink3:#87979A;
+
+  --br:#36C8B4; --br2:#5EDCCB; --brD:#25AE9B; --brL:rgba(54,200,180,.13);
+  --on-br:#03201C;
+  --gold:#E2B862; --goldL:rgba(226,184,98,.14); --gold2:#F0CF8A;
+  --frame:#060C0E; --frame2:#0A1518;
+
+  --ok:#4CD08F; --okL:rgba(76,208,143,.14);
+  --wr:#E7B24F; --wrL:rgba(231,178,79,.14);
+  --bd:#F37B6C; --bdL:rgba(243,123,108,.14);
+
+  --sh:0 1px 0 rgba(0,0,0,.35), 0 8px 20px -12px rgba(0,0,0,.7);
+  --shL:0 20px 44px -16px rgba(0,0,0,.85);
+  --hi:inset 0 1px 0 rgba(255,255,255,.04);
 }
+
+/*══════════ الأساس ══════════*/
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;height:100%}
+html,body{margin:0;padding:0;min-height:100%}
+html{-webkit-text-size-adjust:100%}
 body{
-  font-family:'Zain',system-ui,sans-serif;background:var(--bg);color:var(--ink);
-  font-size:15px;line-height:1.6;overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
+  font-family:var(--fb);background:var(--bg);color:var(--ink);
+  font-size:15px;line-height:1.6;font-weight:500;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  transition:background-color .3s ease,color .3s ease;
 }
-/* هالات لونية هادئة في الخلفية — نفس أثر برنامج العيادة */
+/* ورق المخطّطات — نفس خلفية «أسناني»: شبكة ثابتة، وضوء دافئ خافت في الزاويتين */
 body::before{
-  content:'';position:fixed;inset:-25%;z-index:-1;pointer-events:none;
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(38% 32% at 18% 12%, var(--blob1) 0%, transparent 62%),
-    radial-gradient(42% 36% at 84% 22%, var(--blob2) 0%, transparent 64%),
-    radial-gradient(40% 34% at 50% 96%, var(--blob3) 0%, transparent 62%);
-  opacity:.5;filter:blur(46px);
+    radial-gradient(60vw 40vw at 100% 0%, color-mix(in srgb,var(--br) 7%,transparent), transparent 70%),
+    radial-gradient(50vw 40vw at 0% 100%, color-mix(in srgb,var(--gold) 6%,transparent), transparent 70%),
+    linear-gradient(var(--grid) 1px,transparent 1px) 0 0/36px 36px,
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/36px 36px;
 }
-.wrap{max-width:560px;margin:0 auto;padding:16px 14px 96px}
+::selection{background:color-mix(in srgb,var(--br) 22%,transparent);color:var(--ink)}
+
+.wrap{max-width:560px;margin:0 auto;padding:16px 14px calc(110px + env(safe-area-inset-bottom))}
 .hide{display:none!important}
 .gr{flex:1;min-width:0}
 .ctr{text-align:center}
@@ -78,124 +115,228 @@ body::before{
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .mt{margin-top:11px}.mt2{margin-top:18px}
 .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tiny{font-size:12px;color:var(--ink2);font-weight:600}
-.h1{font-size:26px;font-weight:900;letter-spacing:-.02em;line-height:1.25}
-.h2{font-size:19px;font-weight:800;letter-spacing:-.01em}
-.h3{font-size:15.5px;font-weight:800}
-.lbl{font-size:12px;font-weight:800;color:var(--ink3);letter-spacing:.03em}
-.mono{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.tiny{font-size:12.5px;color:var(--ink2);font-weight:500}
+.h1{font-family:var(--fd);font-size:25px;font-weight:700;letter-spacing:-.02em;line-height:1.3}
+.h2{font-family:var(--fd);font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.35}
+.h3{font-family:var(--fd);font-size:15px;font-weight:600;line-height:1.4}
+.lbl{font-family:var(--fd);font-size:12px;font-weight:600;color:var(--ink3);letter-spacing:.02em;
+     display:flex;align-items:center;gap:7px}
+.lbl::before{content:'';width:6px;height:6px;border-radius:2px;background:var(--br);
+     box-shadow:0 0 8px color-mix(in srgb,var(--br) 60%,transparent);flex-shrink:0}
+.lbl.ctr{justify-content:center}
+.mono{font-family:var(--fd);font-variant-numeric:tabular-nums;letter-spacing:0}
 
+/*──────── الأسطح ────────*/
 .card{
-  background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
-  border:1px solid var(--stroke);border-radius:var(--r);padding:16px;
-  box-shadow:var(--sh);margin-top:12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:17px;box-shadow:var(--sh),var(--hi);margin-top:12px;position:relative;
 }
-.card.flat{background:var(--glass2);box-shadow:none}
+.card.flat{background:var(--surface2);box-shadow:none}
 
-label.lb{display:block;font-size:12.5px;font-weight:800;color:var(--ink2);margin-bottom:5px}
+/*──────── الإدخال ────────*/
+label.lb{display:block;font-family:var(--fd);font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:6px}
 input,select,textarea{
-  width:100%;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);
-  background:var(--glassS);border:1px solid var(--stroke);border-radius:13px;
-  padding:12px 13px;outline:none;transition:border-color .18s,box-shadow .18s;
+  width:100%;font-family:inherit;font-size:15px;font-weight:500;color:var(--ink);
+  background:var(--surface);border:1px solid var(--line2);border-radius:13px;
+  padding:12px 14px;outline:none;min-height:48px;
+  box-shadow:inset 0 1px 2px rgba(15,30,36,.04);
+  transition:border-color .16s,box-shadow .16s,background-color .16s;
 }
+input:hover,select:hover,textarea:hover{border-color:color-mix(in srgb,var(--br) 45%,var(--line2))}
 input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 4px var(--brL)}
-input.err{border-color:var(--bd);background:var(--bdL)}
-textarea{min-height:84px;resize:vertical;line-height:1.6}
+input.err{border-color:var(--bd);background:color-mix(in srgb,var(--bd) 5%,var(--surface))}
+input::placeholder,textarea::placeholder{color:var(--ink3);font-weight:400;opacity:.85}
+input[type=checkbox],input[type=radio]{width:20px;height:20px;min-height:0;padding:0;
+  accent-color:var(--br);box-shadow:none;flex-shrink:0;cursor:pointer}
+textarea{min-height:90px;resize:vertical;line-height:1.6}
+select{cursor:pointer}
 
+/*──────── الأزرار ────────*/
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+a.btn{text-decoration:none}
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:13px 18px;border-radius:14px;font-size:15px;font-weight:800;
-  background:var(--br);color:var(--on-br);box-shadow:var(--sh);
-  transition:transform .12s,filter .18s;
+  --b:var(--br);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;
+  min-height:48px;padding:12px 20px;border-radius:14px;
+  font-family:var(--fd);font-size:15px;font-weight:600;color:var(--on-br);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--b) 82%,#fff) 0%,var(--b) 55%,color-mix(in srgb,var(--b) 88%,#000) 100%);
+  border:1px solid color-mix(in srgb,var(--b) 70%,#000);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 1px 2px rgba(15,30,36,.18),
+             0 8px 18px -8px color-mix(in srgb,var(--b) 70%,transparent);
+  transition:transform .14s cubic-bezier(.2,.9,.3,1),box-shadow .16s,filter .16s;
 }
-.btn:active{transform:scale(.98)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.05) saturate(1.05);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 2px 4px rgba(15,30,36,.16),
+             0 14px 26px -10px color-mix(in srgb,var(--b) 75%,transparent)}
+.btn:active{transform:scale(.97);filter:brightness(.97)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:grayscale(.3)}
 .btn.w{width:100%}
-.btn.gh{background:var(--glass2);color:var(--ink);border:1px solid var(--stroke);box-shadow:none}
-.btn.sm{padding:9px 13px;font-size:13.5px;border-radius:11px}
-.lnk{color:var(--br);font-weight:800;font-size:13.5px;text-decoration:underline;
-     text-underline-offset:3px;padding:7px}
+.btn.gh{background:var(--surface);color:var(--ink);border:1px solid var(--line2);
+  box-shadow:0 1px 2px rgba(15,30,36,.05),var(--hi)}
+.btn.gh:hover{border-color:var(--br);color:var(--br);box-shadow:0 0 0 3px var(--brL),var(--hi)}
+.btn.sm{min-height:38px;padding:8px 13px;font-size:13.5px;border-radius:11px}
+.lnk{color:var(--br);font-family:var(--fd);font-weight:600;font-size:13.5px;
+  padding:7px 10px;border-radius:10px;transition:background .16s}
+.lnk:hover{background:var(--brL)}
 
-.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;
-      font-size:12px;font-weight:800;background:var(--glass2);border:1px solid var(--edge)}
+/* نبضة تحت الإصبع */
+.rpl{position:absolute;border-radius:50%;pointer-events:none;transform:scale(0);
+  background:currentColor;opacity:.22;animation:rpl .55s ease-out forwards}
+@keyframes rpl{to{transform:scale(2.6);opacity:0}}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:99px;
+  font-family:var(--fd);font-size:12px;font-weight:600;background:var(--surface2);
+  border:1px solid var(--line);white-space:nowrap}
 .pill.g{background:var(--okL);color:var(--ok);border-color:transparent}
 .pill.w{background:var(--wrL);color:var(--wr);border-color:transparent}
 .pill.r{background:var(--bdL);color:var(--bd);border-color:transparent}
+.pill.g::before,.pill.w::before,.pill.r::before{content:'';width:6px;height:6px;border-radius:9px;background:currentColor}
+.pill.w::before{animation:dot 1.6s ease-in-out infinite}
+@keyframes dot{50%{opacity:.3;transform:scale(.7)}}
 
 .al{display:flex;gap:9px;align-items:flex-start;padding:11px 13px;border-radius:13px;
-    font-size:13.5px;font-weight:700;line-height:1.55;margin-top:11px}
-.al.g{background:var(--okL);color:var(--ok)}
-.al.w{background:var(--wrL);color:var(--wr)}
-.al.r{background:var(--bdL);color:var(--bd)}
+  font-size:13.5px;font-weight:600;line-height:1.6;margin-top:11px;border:1px solid transparent}
+.al.g{background:var(--okL);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 18%,transparent)}
+.al.w{background:var(--wrL);color:var(--wr);border-color:color-mix(in srgb,var(--wr) 18%,transparent)}
+.al.r{background:var(--bdL);color:var(--bd);border-color:color-mix(in srgb,var(--bd) 18%,transparent);
+  animation:shake .38s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shake{20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
 
-.it{display:flex;align-items:center;gap:11px;padding:13px;border-radius:14px;
-    background:var(--glass2);border:1px solid var(--stroke);cursor:pointer;
-    transition:transform .12s,border-color .18s}
-.it:active{transform:scale(.99)}
-.it:hover{border-color:var(--br)}
-.av{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:grid;place-items:center;
-    background:var(--brL);color:var(--br);font-weight:900;font-size:16px}
+.it{display:flex;align-items:center;gap:11px;padding:12px 13px;border-radius:15px;position:relative;overflow:hidden;
+  background:var(--surface2);border:1px solid var(--line);cursor:pointer;
+  transition:transform .14s,border-color .16s,box-shadow .16s,background-color .16s}
+.it:active{transform:scale(.985)}
+.it:hover{border-color:color-mix(in srgb,var(--br) 50%,var(--line));box-shadow:var(--sh)}
+label.it:has(input:checked){border-color:var(--br);background:color-mix(in srgb,var(--br) 7%,var(--surface));
+  box-shadow:0 0 0 3px var(--brL)}
+.av{width:42px;height:42px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;
+  font-family:var(--fd);font-weight:700;font-size:15px;color:var(--br);
+  background:linear-gradient(150deg,color-mix(in srgb,var(--br) 16%,var(--surface)),color-mix(in srgb,var(--br) 8%,var(--surface)));
+  border:1px solid color-mix(in srgb,var(--br) 18%,transparent)}
 
-.emp{padding:26px 16px;text-align:center;color:var(--ink3);font-weight:700;font-size:13.5px}
-.spin{width:22px;height:22px;border:2.5px solid var(--edge);border-top-color:var(--br);
-      border-radius:99px;animation:sp .7s linear infinite;margin:22px auto}
+.emp{padding:26px 16px;text-align:center;color:var(--ink3);font-weight:600;font-size:13.5px}
+.spin{width:26px;height:26px;border:2.5px solid var(--line);border-top-color:var(--br);
+  border-radius:99px;animation:sp .7s linear infinite;margin:40px auto}
 @keyframes sp{to{transform:rotate(360deg)}}
 
-/* ── العنصر المميّز: بطاقة الموعد ──
-   الحجز في الواقع ورقة يُريها المراجع للاستقبال. فالبطاقة تُقصّ
-   من الجانب كتذكرة، وحالتها هي البطل لا زخرفة حولها. */
-.tk{position:relative;overflow:hidden;padding:0;margin-top:12px;
-    background:var(--glassS);border:1px solid var(--stroke);border-radius:var(--r);
-    box-shadow:var(--shL)}
-.tk .top{padding:16px 16px 13px}
-.tk .cut{position:relative;height:1px;background:repeating-linear-gradient(
-  to left, var(--edge) 0 7px, transparent 7px 14px)}
-.tk .cut::before,.tk .cut::after{
-  content:'';position:absolute;top:-9px;width:18px;height:18px;border-radius:99px;
-  background:var(--bg);border:1px solid var(--edge)}
-.tk .cut::before{inset-inline-start:-10px}
-.tk .cut::after{inset-inline-end:-10px}
-.tk .bot{padding:13px 16px 15px;display:flex;align-items:center;gap:11px}
-.tk .when{font-size:21px;font-weight:900;letter-spacing:-.01em}
+/* حالة فارغة: أيقونة تطفو بهدوء */
+.card.ctr > div:first-child[style*="font-size"]{display:inline-grid;place-items:center;width:74px;height:74px;
+  border-radius:24px;background:var(--brL);border:1px solid color-mix(in srgb,var(--br) 15%,transparent);
+  animation:float 3.6s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-5px)}}
 
-.tabs{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;
-  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
-  border-top:1px solid var(--stroke);padding:7px 8px calc(7px + env(safe-area-inset-bottom))}
-.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px 4px;border-radius:13px;color:var(--ink3);font-size:11px;font-weight:800;
-  transition:color .18s,background .18s}
-.tabs button.on{color:var(--br);background:var(--brL)}
-.tabs .ic{font-size:19px;line-height:1}
+/*──────── الرأس ────────*/
+.hdr{padding:8px 2px 2px;align-items:flex-end}
+.hdr .hi{font-size:12.5px;color:var(--ink3);font-weight:600;font-family:var(--fd)}
+.hdr .h2{font-size:24px}
+#theme{width:44px;height:44px;min-height:0;padding:0;border-radius:14px;font-size:18px}
+#theme .sun{display:none}
+html[data-theme=dark] #theme .sun{display:block}
+html[data-theme=dark] #theme .moon{display:none}
+#theme svg{transition:transform .5s cubic-bezier(.2,.9,.3,1.4)}
+#theme:active svg{transform:rotate(90deg) scale(.8)}
+
+/* دخول المحتوى: كل بطاقة تنساب بعد سابقتها */
+#view > *{animation:rise .5s cubic-bezier(.2,.9,.3,1) both;animation-delay:calc(var(--i,0) * 60ms)}
+@keyframes rise{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+
+/*──────── الموعد القادم: بطاقة البطل ────────*/
+.card.nxt{overflow:hidden;color:#fff;border:1px solid color-mix(in srgb,var(--br) 60%,#000);
+  background:
+    radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.18),transparent 55%),
+    radial-gradient(80% 70% at 0% 100%,color-mix(in srgb,var(--gold2) 35%,transparent),transparent 60%),
+    linear-gradient(150deg,color-mix(in srgb,var(--br) 80%,#1ad1b6),var(--br) 50%,color-mix(in srgb,var(--br) 60%,#02201c));
+  box-shadow:0 20px 40px -20px color-mix(in srgb,var(--br) 90%,transparent),inset 0 1px 0 rgba(255,255,255,.25)}
+html[data-theme=dark] .card.nxt{background:
+    radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.10),transparent 55%),
+    radial-gradient(80% 70% at 0% 100%,rgba(226,184,98,.22),transparent 60%),
+    linear-gradient(150deg,#0F6F63,#0A4F47 55%,#06302B)}
+.card.nxt::after{content:'';position:absolute;inset-inline-end:-30px;bottom:-46px;width:170px;height:170px;opacity:.12;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M12 3c-3 0-4-1.2-6 0C4 4.2 3.4 7 4 10c.5 2.6 1.3 4 1.8 6.6.4 2 .6 4.4 2 4.4 1.6 0 1.3-2.6 1.8-4.6.4-1.6.8-2.4 2.4-2.4s2 .8 2.4 2.4c.5 2 .2 4.6 1.8 4.6 1.4 0 1.6-2.4 2-4.4.5-2.6 1.3-4 1.8-6.6.6-3 0-5.8-2-7-2-1.2-3 0-6 0z'/%3E%3C/svg%3E") no-repeat center/contain;
+  animation:float 5s ease-in-out infinite}
+.card.nxt .tiny{color:rgba(255,255,255,.82)}
+.card.nxt .pill.g{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.28)}
+.card.nxt .pill.g::before{animation:dot 1.6s ease-in-out infinite}
+.card.nxt .h1{font-size:27px;text-shadow:0 2px 12px rgba(0,0,0,.18)}
+.card.nxt .btn.gh{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.3);box-shadow:none}
+.card.nxt .btn.gh:hover{background:rgba(255,255,255,.24);box-shadow:none}
+.cd{display:inline-flex;align-items:baseline;gap:6px;margin-top:6px;padding:5px 12px;border-radius:12px;
+  background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.18);font-family:var(--fd);font-weight:600;font-size:13px}
+.cd b{font-size:19px;font-weight:700;color:var(--gold2)}
+
+/*──────── بطاقة الحجز: تذكرة ────────
+  الحجز في الواقع ورقة يُريها المراجع للاستقبال. فالبطاقة تُقصّ
+  من الجانب كتذكرة، وحالتها هي البطل لا زخرفة حولها. */
+.tk{--sc:var(--line2);position:relative;overflow:hidden;padding:0;margin-top:14px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shL),var(--hi);transition:transform .18s cubic-bezier(.2,.9,.3,1),box-shadow .18s}
+.tk:hover{transform:translateY(-2px)}
+.tk::before{content:'';position:absolute;inset-block:0;inset-inline-start:0;width:5px;background:var(--sc)}
+.tk:has(.pill.g){--sc:var(--ok)} .tk:has(.pill.w){--sc:var(--wr)} .tk:has(.pill.r){--sc:var(--bd)}
+.tk .top{padding:16px 18px 13px}
+.tk .cut{position:relative;height:1px;margin:0 14px;background:repeating-linear-gradient(
+  to left, var(--line2) 0 7px, transparent 7px 14px)}
+.tk .cut::before,.tk .cut::after{
+  content:'';position:absolute;top:-10px;width:20px;height:20px;border-radius:99px;
+  background:var(--bg);border:1px solid var(--line);box-shadow:inset 0 2px 3px rgba(15,30,36,.06)}
+.tk .cut::before{inset-inline-start:-25px}
+.tk .cut::after{inset-inline-end:-25px}
+.tk .bot{padding:13px 18px 15px;display:flex;align-items:center;gap:11px}
+.tk .when{font-family:var(--fd);font-size:20px;font-weight:700;letter-spacing:-.01em}
+
+/*──────── الشريط السفلي العائم ────────*/
+.tabs{position:fixed;inset-inline:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;display:flex;
+  max-width:536px;margin:0 auto;padding:6px;border-radius:22px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);
+  border:1px solid var(--line);box-shadow:var(--shL),var(--hi)}
+.tabs .ind{position:absolute;top:6px;bottom:6px;border-radius:16px;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--br) 82%,#fff),var(--br));
+  box-shadow:0 8px 18px -8px color-mix(in srgb,var(--br) 80%,transparent),inset 0 1px 0 rgba(255,255,255,.3);
+  transition:inset-inline-start .38s cubic-bezier(.2,.9,.3,1.15),width .38s cubic-bezier(.2,.9,.3,1)}
+.tabs button{flex:1;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 4px 7px;border-radius:16px;color:var(--ink3);font-family:var(--fd);font-size:11px;font-weight:600;
+  transition:color .25s;overflow:hidden}
+.tabs button.on{color:var(--on-br)}
+.tabs .ic{display:grid;place-items:center;height:22px;transition:transform .35s cubic-bezier(.2,.9,.3,1.6)}
+.tabs .ic svg{width:21px;height:21px}
+.tabs button.on .ic{transform:translateY(-1px) scale(1.08)}
+.tabs button:active .ic{transform:scale(.85)}
 
 /* منسدلات الجلسات */
-details.acc{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r);
-  margin-top:10px;overflow:hidden}
+details.acc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  margin-top:10px;overflow:hidden;box-shadow:var(--sh),var(--hi);transition:border-color .2s,box-shadow .2s}
+details.acc[open]{border-color:color-mix(in srgb,var(--br) 35%,var(--line))}
 details.acc>summary{padding:13px 14px;cursor:pointer;font-size:14.5px;
   display:flex;align-items:center;gap:10px;list-style:none}
 details.acc>summary::-webkit-details-marker{display:none}
-details.acc>summary .accic{width:34px;height:34px;border-radius:11px;display:grid;
-  place-items:center;background:var(--brL);flex-shrink:0}
-details.acc>summary .ar{color:var(--ink3);transition:transform .2s;flex-shrink:0}
-details.acc[open]>summary .ar{transform:rotate(-90deg)}
-details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top:12px}
+details.acc>summary .accic{width:38px;height:38px;border-radius:12px;display:grid;
+  place-items:center;background:var(--brL);flex-shrink:0;font-size:17px}
+details.acc>summary .ar{color:var(--ink3);transition:transform .25s cubic-bezier(.2,.9,.3,1.3);flex-shrink:0;
+  width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:var(--surface2)}
+details.acc[open]>summary .ar{transform:rotate(-90deg);color:var(--br)}
+details.acc>.bd{padding:12px 14px 14px;border-top:1px dashed var(--line2)}
+details.acc[open]>.bd{animation:rise .35s cubic-bezier(.2,.9,.3,1)}
 
 /* زر حذف الحجز — ناعم لا صارخ: الإلغاء تصرّف عادي لا خطر */
-.delx{width:30px;height:30px;border-radius:10px;flex-shrink:0;
-  color:var(--ink3);font-size:14px;font-weight:800;line-height:1;
-  background:var(--glass2);border:1px solid var(--edge);
+.delx{width:32px;height:32px;border-radius:10px;flex-shrink:0;
+  color:var(--ink3);font-size:14px;font-weight:700;line-height:1;
+  background:var(--surface2);border:1px solid var(--line);
   transition:color .18s,background .18s,transform .12s,box-shadow .18s}
 .delx:hover{color:var(--bd);background:var(--bdL);border-color:transparent;
   box-shadow:0 0 12px -4px var(--bd)}
 .delx:active{transform:scale(.9)}
 
 /* الباركود داخل البطاقة */
-.bcbtn{width:38px;height:38px;border-radius:12px;flex-shrink:0;
+.bcbtn{width:42px;height:42px;border-radius:13px;flex-shrink:0;
   background:var(--brL);color:var(--br);font-size:13px;font-weight:900;
-  letter-spacing:-1px;border:1px solid var(--edge);transition:transform .12s}
-.bcbtn:active{transform:scale(.94)}
-.bcbox{padding:0 16px 15px;animation:up .28s cubic-bezier(.2,.9,.3,1)}
-.bcpaper{background:#fff;border-radius:13px;padding:12px;border:1px solid var(--edge)}
+  letter-spacing:-1px;border:1px solid color-mix(in srgb,var(--br) 20%,transparent);position:relative;overflow:hidden;
+  transition:transform .14s,background .16s,box-shadow .16s}
+.bcbtn:hover{box-shadow:0 0 0 3px var(--brL)}
+.bcbtn:active{transform:scale(.92)}
+.bcbox{padding:0 16px 15px;animation:rise .3s cubic-bezier(.2,.9,.3,1)}
+.bcpaper{background:#fff;border-radius:14px;padding:12px;border:1px solid var(--line);margin-top:8px;
+  box-shadow:0 10px 24px -16px rgba(0,0,0,.4)}
 .bcnum{color:#000;text-align:center;font-family:monospace;font-weight:800;
   font-size:19px;letter-spacing:.24em;margin-top:5px}
 /* ترتيب الملصق: اسم الطبيب فوق، الباركود، ثم اسم المراجع ووقت حجزه */
@@ -208,54 +349,58 @@ details.acc>.bd{padding:0 14px 14px;border-top:1px solid var(--edge);padding-top
 .it.off{opacity:.42;filter:saturate(.35)}
 
 /* شريط الإشعارات — بشكل شريط التثبيت، وفوقه إن ظهرا معاً */
-#pushbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
+#pushbar{position:fixed;inset-inline:0;bottom:calc(86px + env(safe-area-inset-bottom));
   z-index:51;padding:0 12px;display:flex;justify-content:center}
-body:has(#instbar) #pushbar{bottom:calc(142px + env(safe-area-inset-bottom))}
-#pushbar .box{display:flex;align-items:center;gap:11px;width:100%;max-width:536px;
-  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
-  border:1px solid var(--stroke);border-radius:16px;padding:10px 12px;box-shadow:var(--shL);
-  animation:up .35s cubic-bezier(.2,.9,.3,1)}
-#pushbar .pb-ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:19px;background:var(--glass2)}
-#pushbar .nm{font-weight:900;font-size:14.5px}
-#pushbar .ds{font-size:11.5px;color:var(--ink2);font-weight:600;line-height:1.4}
-#pushbar .x{width:28px;height:28px;border-radius:9px;color:var(--ink3);flex-shrink:0;font-size:14px;background:var(--glass2)}
+body:has(#instbar) #pushbar{bottom:calc(154px + env(safe-area-inset-bottom))}
+#pushbar .box,#instbar .box{display:flex;align-items:center;gap:11px;width:100%;max-width:536px;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px 12px;
+  box-shadow:var(--shL),var(--hi);animation:rise .4s cubic-bezier(.2,.9,.3,1)}
+#pushbar .pb-ic{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:grid;place-items:center;font-size:19px;background:var(--brL)}
+#pushbar .nm,#instbar .nm{font-family:var(--fd);font-weight:700;font-size:14.5px}
+#pushbar .ds,#instbar .ds{font-size:11.5px;color:var(--ink2);font-weight:500;line-height:1.4}
+#pushbar .x,#instbar .x{width:30px;height:30px;border-radius:10px;color:var(--ink3);flex-shrink:0;font-size:14px;background:var(--surface2)}
+#pushbar .btn,#instbar .btn{min-height:40px;padding:8px 16px}
 
 /* شريط التثبيت — نفس شكل برنامج العيادة */
-#instbar{position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom));
+#instbar{position:fixed;inset-inline:0;bottom:calc(86px + env(safe-area-inset-bottom));
   z-index:50;padding:0 12px;display:flex;justify-content:center}
-#instbar .box{display:flex;align-items:center;gap:11px;width:100%;max-width:536px;
-  background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
-  border:1px solid var(--stroke);border-radius:16px;padding:10px 12px;box-shadow:var(--shL);
-  animation:up .35s cubic-bezier(.2,.9,.3,1)}
-#instbar img{width:38px;height:38px;border-radius:11px;flex-shrink:0}
-#instbar .nm{font-weight:900;font-size:14.5px}
-#instbar .ds{font-size:11.5px;color:var(--ink2);font-weight:600;line-height:1.4}
-#instbar .x{width:28px;height:28px;border-radius:9px;color:var(--ink3);flex-shrink:0;
-  font-size:14px;background:var(--glass2)}
+#instbar img{width:40px;height:40px;border-radius:12px;flex-shrink:0}
 
-.toast{position:fixed;inset-inline:0;bottom:88px;z-index:60;display:flex;justify-content:center;
-       pointer-events:none;padding:0 16px}
-.toast div{background:var(--glassS);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
-  border:1px solid var(--stroke);border-radius:14px;padding:12px 17px;box-shadow:var(--shL);
-  font-weight:800;font-size:14px;max-width:100%;animation:up .3s cubic-bezier(.2,.9,.3,1)}
-.toast div.s{color:var(--ok)} .toast div.e{color:var(--bd)}
+.toast{position:fixed;inset-inline:0;top:calc(14px + env(safe-area-inset-top));z-index:60;display:flex;justify-content:center;
+  pointer-events:none;padding:0 16px}
+.toast div{background:var(--frame);color:#E9F1EF;border:1px solid rgba(255,255,255,.08);border-radius:15px;
+  padding:12px 18px;box-shadow:var(--shL);font-family:var(--fd);font-weight:600;font-size:14px;max-width:100%;
+  animation:tdrop .4s cubic-bezier(.2,.9,.3,1.3)}
+.toast div.s{color:#7BE3B0} .toast div.e{color:#FF9E91}
+@keyframes tdrop{from{opacity:0;transform:translateY(-16px) scale(.96)}}
 @keyframes up{from{opacity:0;transform:translateY(14px)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* شاشة الدخول */
+#auth .ctr img#au-logo{width:84px!important;height:84px!important;border-radius:24px!important;
+  box-shadow:0 18px 40px -16px color-mix(in srgb,var(--br) 85%,transparent),0 0 0 6px var(--brL)!important;
+  animation:float 4s ease-in-out infinite}
+#auth .h1{font-size:30px}
+#auth > .card{animation:rise .5s cubic-bezier(.2,.9,.3,1) both;padding:20px}
 
 /* ── شريط العيادة وشاشة الباركود ── */
-.clbar{display:flex;align-items:center;gap:11px;padding:10px 12px;margin:2px 0 8px;
-  border-radius:16px;cursor:pointer;background:var(--glassS);border:1px solid var(--stroke);
-  box-shadow:var(--sh), 0 0 24px -14px var(--br2);
-  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
-.cllogo{width:42px;height:42px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;
-  font-size:20px;background:linear-gradient(140deg,var(--br2),var(--br));color:#fff;overflow:hidden}
-.cllogo.img,img.cllogo{background:#fff;border:1px solid var(--edge);object-fit:contain;padding:3px}
+.clbar{display:flex;align-items:center;gap:11px;padding:10px 12px;margin:2px 0 10px;
+  border-radius:18px;cursor:pointer;background:var(--surface);border:1px solid var(--line);
+  box-shadow:var(--sh),var(--hi);position:relative;overflow:hidden;
+  transition:transform .16s,border-color .16s,box-shadow .16s}
+.clbar:hover{border-color:color-mix(in srgb,var(--br) 45%,var(--line));box-shadow:var(--shL)}
+.clbar:active{transform:scale(.99)}
+.clbar .pill{background:var(--brL);color:var(--br);border-color:transparent}
+.cllogo{width:44px;height:44px;border-radius:14px;flex-shrink:0;display:grid;place-items:center;
+  font-size:20px;background:linear-gradient(140deg,var(--br2),var(--br));color:#fff;overflow:hidden;
+  box-shadow:0 8px 16px -8px var(--br)}
+.cllogo.img,img.cllogo{background:#fff;border:1px solid var(--line);object-fit:contain;padding:3px;box-shadow:none}
 .cllogo img{width:100%;height:100%;object-fit:contain}
-.scanhero{background:linear-gradient(180deg,var(--glassS),var(--glass));
-  box-shadow:var(--shL), 0 0 50px -26px var(--br2)}
-.scanic{width:70px;height:70px;margin:4px auto 0;border-radius:22px;display:grid;place-items:center;
+.scanhero{background:
+  radial-gradient(90% 70% at 50% 0%,color-mix(in srgb,var(--br) 9%,transparent),transparent 70%),var(--surface)}
+.scanic{width:76px;height:76px;margin:4px auto 0;border-radius:24px;display:grid;place-items:center;
   font-size:22px;font-weight:900;letter-spacing:-2px;color:#fff;
-  background:linear-gradient(140deg,var(--br2),var(--br));box-shadow:0 14px 34px -14px var(--br)}
+  background:linear-gradient(140deg,var(--br2),var(--br));box-shadow:0 14px 34px -14px var(--br),0 0 0 6px var(--brL);
+  animation:float 3.6s ease-in-out infinite}
 .camwrap{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3}
 .camwrap video{width:100%;height:100%;object-fit:cover;display:block}
 .camaim{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
@@ -266,6 +411,8 @@ body:has(#instbar) #pushbar{bottom:calc(142px + env(safe-area-inset-bottom))}
 @keyframes sweep{0%,100%{transform:translateY(-17%)}50%{transform:translateY(17%)}}
 .camst{position:absolute;inset-inline:0;bottom:0;padding:10px;text-align:center;
   background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;font-size:13px;font-weight:700}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
 /*──────── شاشة الافتتاح: الشعار يتكسّر ثم يلتئم أثناء التحميل ────────*/
 #splash{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
@@ -447,22 +594,27 @@ window.DF_LOGO="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcm
       </div>
       <span class="pill">تغيير</span>
     </div>
-    <div class="row" style="padding:6px 2px 0">
+    <div class="row hdr">
       <div class="gr">
+        <div class="hi" id="pg-hi"></div>
         <div class="h2" id="pg-title"></div>
         <div class="tiny" id="pg-sub"></div>
       </div>
-      <button class="btn gh sm" id="theme">◐</button>
+      <button class="btn gh sm" id="theme" title="المظهر" aria-label="المظهر">
+        <svg class="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
     </div>
     <div id="view"></div>
   </div>
 </div>
 
 <div class="tabs hide" id="tabs">
-  <button data-t="care"><span class="ic">📅</span><span>مواعيدي</span></button>
-  <button data-t="home"><span class="ic">🎫</span><span>حجوزاتي</span></button>
-  <button data-t="book"><span class="ic">＋</span><span>احجز</span></button>
-  <button data-t="me"><span class="ic">👤</span><span>حسابي</span></button>
+  <span class="ind" aria-hidden="true"></span>
+  <button data-t="care"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.5 14.5l2 2 4-4"/></svg></span><span>مواعيدي</span></button>
+  <button data-t="home"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v2a2.5 2.5 0 0 0 0 5v2a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-2a2.5 2.5 0 0 0 0-5z"/><path d="M14 5v14" stroke-dasharray="2 2.4"/></svg></span><span>حجوزاتي</span></button>
+  <button data-t="book"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></svg></span><span>احجز</span></button>
+  <button data-t="me"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.6 3.8-5.6 7.5-5.6s6.6 2 7.5 5.6"/></svg></span><span>حسابي</span></button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1218,6 +1370,7 @@ const App = {
     Scan.stop();
     S.tab = t;
     $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+    FX.tabInd();
     window.scrollTo({ top:0 });
     this.draw();
   },
@@ -1230,6 +1383,8 @@ const App = {
     const [a, b] = titles[S.tab];
     $('#pg-title').textContent = a;
     $('#pg-sub').textContent = b;
+    const h = new Date().getHours(), n1 = (S.profile && S.profile.n1) || '';
+    $('#pg-hi').textContent = (h < 12 ? 'صباح الخير' : 'مساء الخير') + (n1 ? '، ' + n1 : '') + ' 👋';
     if (S.tab === 'care') return Care.draw();
     if (S.tab === 'home') return Book.mine();
     if (S.tab === 'book') return S.clinic ? Book.form(S.clinic) : Clinic.show();
@@ -1859,7 +2014,7 @@ const Care = {
 
       v.innerHTML = `
         ${next.length ? next.map(a => `
-          <div class="card" style="border-color:var(--br)">
+          <div class="card nxt">
             <div class="row">
               <span class="pill g">موعدك القادم</span>
               <div class="gr"></div>
@@ -1867,6 +2022,7 @@ const Care = {
             </div>
             <div class="h1 mt" style="letter-spacing:-.01em">
               ${fmtD(a.day)}${a.time ? ' · ' + esc(a.time) : ''}</div>
+            ${FX.left(a.day)}
             ${a.note ? `<div class="tiny mt">${esc(a.note)}</div>` : ''}
             ${a.phone ? `<a class="btn gh w mt" href="tel:${esc(String(a.phone).replace(/[^\d+]/g,''))}">
               اتصل بالعيادة</a>` : ''}
@@ -2460,6 +2616,60 @@ const Resume = {
 };
 window.addEventListener('online', () => { if (Cloud.session && !$('#app').classList.contains('hide') && !S.profile) Resume.go(); });
 
+/*═══════════════ لمسات التفاعل ═══════════════
+  زخرفة فقط: لا تمسّ منطق البرنامج، وكل خطأ فيها يُبلع بصمت. */
+const FX = {
+  /* كم بقي على الموعد — بالأيام، بلغة المراجع */
+  left(day){
+    try {
+      const t = new Date(); t.setHours(0,0,0,0);
+      const d = new Date(day + 'T00:00:00');
+      const n = Math.round((d - t) / 86400000);
+      if (!(n >= 0)) return '';
+      const txt = n === 0 ? 'اليوم' : n === 1 ? 'غداً'
+        : n === 2 ? 'بعد يومين' : '<span>بعد</span><b>' + n + '</b><span>' + (n <= 10 ? 'أيام' : 'يوماً') + '</span>';
+      return '<div class="cd">' + (n <= 2 ? '<b>' + txt + '</b>' : txt) + '</div>';
+    } catch(_){ return ''; }
+  },
+  /* المؤشّر العائم تحت القسم المختار */
+  tabInd(){
+    try {
+      const bar = $('#tabs'), ind = bar && bar.querySelector('.ind'), on = bar && bar.querySelector('button.on');
+      if (!ind || !on || !bar.offsetWidth) return;
+      const rtl = getComputedStyle(bar).direction === 'rtl';
+      const br = bar.getBoundingClientRect(), r = on.getBoundingClientRect();
+      ind.style.width = r.width + 'px';
+      ind.style.insetInlineStart = (rtl ? br.right - r.right : r.left - br.left) - 1 + 'px';
+    } catch(_){}
+  },
+  init(){
+    /* نبضة تحت الإصبع على الأزرار والبنود */
+    document.addEventListener('pointerdown', e => {
+      try {
+        const el = e.target.closest('.btn, .it, .clbar, .tabs button, .bcbtn');
+        if (!el || el.disabled || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const r = el.getBoundingClientRect(), d = Math.max(r.width, r.height);
+        const s = document.createElement('span');
+        s.className = 'rpl';
+        s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d/2}px;top:${e.clientY - r.top - d/2}px`;
+        el.appendChild(s);
+        setTimeout(() => s.remove(), 600);
+      } catch(_){}
+    }, { passive:true });
+    /* كل ما يُرسم في الصفحة ينساب بطاقةً بعد بطاقة */
+    const v = $('#view');
+    if (v) new MutationObserver(() => {
+      [...v.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, 8)));
+    }).observe(v, { childList:true });
+    /* المؤشّر يُعاد ضبطه حين يظهر الشريط أو يتغيّر عرض الشاشة */
+    addEventListener('resize', () => this.tabInd());
+    const tb = $('#tabs');
+    if (tb) new MutationObserver(() => requestAnimationFrame(() => this.tabInd()))
+      .observe(tb, { attributes:true, attributeFilter:['class'] });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.tabInd());
+  },
+};
+
 (function boot(){
   /* فُتح من باركود عيادة (رابط ?c=K…): يُحفظ الرمز لما بعد الدخول */
   Clinic.catchLink();
@@ -2495,6 +2705,7 @@ window.addEventListener('online', () => { if (Cloud.session && !$('#app').classL
 
   Install.init();
   Push.init();
+  try { FX.init(); } catch(_){}
   try { localStorage.removeItem('pt_wait'); localStorage.removeItem('pt_sess'); } catch(_){}
   Auth.show('in');
 
